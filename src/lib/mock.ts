@@ -1,0 +1,257 @@
+import { Question, Argument, User, Category } from "./types";
+
+export const mockUsers: User[] = [
+  { 
+    id: "1", 
+    username: "alice_debater", 
+    points: 1250, 
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "2", 
+    username: "bob_thinker", 
+    points: 980, 
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "3", 
+    username: "charlie_logical", 
+    points: 2100, 
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "4", 
+    username: "diana_wise", 
+    points: 1750, 
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "5", 
+    username: "eve_analyst", 
+    points: 890, 
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" 
+  },
+];
+
+export const mockQuestions: Question[] = [
+  {
+    id: "1",
+    slug: "should-ai-be-regulated",
+    title: "Should AI development be heavily regulated?",
+    description: "As artificial intelligence becomes more powerful, should governments impose strict regulations on AI development?",
+    category: "Technology",
+    yesVotes: 1240,
+    noVotes: 860,
+    totalVotes: 2100,
+    createdAt: new Date("2024-01-15"),
+    image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=450&fit=crop",
+  },
+  {
+    id: "2",
+    slug: "universal-basic-income",
+    title: "Should universal basic income be implemented?",
+    description: "Would a universal basic income solve economic inequality and job displacement?",
+    category: "Economics",
+    yesVotes: 980,
+    noVotes: 1120,
+    totalVotes: 2100,
+    createdAt: new Date("2024-01-20"),
+    image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&h=450&fit=crop",
+  },
+  {
+    id: "3",
+    slug: "climate-action-urgency",
+    title: "Is immediate drastic climate action necessary?",
+    description: "Should governments take immediate, drastic measures to combat climate change, even at the cost of economic growth?",
+    category: "Science",
+    yesVotes: 1650,
+    noVotes: 450,
+    totalVotes: 2100,
+    createdAt: new Date("2024-01-25"),
+    resolved: true,
+    resolvedSide: "YES",
+    resolvedAt: new Date("2024-02-01"),
+    image: "https://images.unsplash.com/photo-1611273426858-450d8e3c9fce?w=800&h=450&fit=crop",
+  },
+  {
+    id: "4",
+    slug: "free-speech-limits",
+    title: "Should free speech have limits?",
+    description: "Are there circumstances where free speech should be restricted for the greater good?",
+    category: "Philosophy",
+    yesVotes: 720,
+    noVotes: 1380,
+    totalVotes: 2100,
+    createdAt: new Date("2024-02-01"),
+    image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=450&fit=crop",
+  },
+  {
+    id: "5",
+    slug: "remote-work-future",
+    title: "Is remote work the future of employment?",
+    description: "Will remote work become the dominant mode of employment in the next decade?",
+    category: "Society",
+    yesVotes: 1100,
+    noVotes: 1000,
+    totalVotes: 2100,
+    createdAt: new Date("2024-02-05"),
+    image: "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&h=450&fit=crop",
+  },
+];
+
+export const mockArgumentsBySlug: Record<string, Argument[]> = {
+  "should-ai-be-regulated": [
+    {
+      id: "arg1",
+      questionId: "1",
+      side: "YES",
+      content: "AI regulation is essential to prevent misuse and ensure ethical development. Without oversight, we risk creating systems that perpetuate bias, invade privacy, or cause harm. Governments must establish frameworks to protect society.",
+      author: mockUsers[0],
+      upvotes: 245,
+      downvotes: 32,
+      createdAt: new Date("2024-01-16"),
+    },
+    {
+      id: "arg2",
+      questionId: "1",
+      side: "NO",
+      content: "Heavy regulation will stifle innovation and slow down progress. The tech industry moves fast, and bureaucratic oversight will prevent us from solving real problems. Self-regulation and industry standards are more effective.",
+      author: mockUsers[1],
+      upvotes: 189,
+      downvotes: 45,
+      createdAt: new Date("2024-01-16"),
+    },
+    {
+      id: "arg3",
+      questionId: "1",
+      side: "YES",
+      content: "We've seen the consequences of unregulated technology with social media. AI is far more powerful and could have catastrophic consequences if left unchecked. Proactive regulation is the responsible approach.",
+      author: mockUsers[3],
+      upvotes: 312,
+      downvotes: 28,
+      createdAt: new Date("2024-01-17"),
+    },
+  ],
+  "universal-basic-income": [
+    {
+      id: "arg4",
+      questionId: "2",
+      side: "YES",
+      content: "UBI provides a safety net for everyone, especially as automation displaces workers. It gives people the freedom to pursue meaningful work, start businesses, or care for family without fear of destitution.",
+      author: mockUsers[2],
+      upvotes: 278,
+      downvotes: 56,
+      createdAt: new Date("2024-01-21"),
+    },
+    {
+      id: "arg5",
+      questionId: "2",
+      side: "NO",
+      content: "UBI is economically unsustainable and would disincentivize work. The cost would be astronomical, and many people would choose not to work, reducing overall productivity and economic growth.",
+      author: mockUsers[4],
+      upvotes: 201,
+      downvotes: 67,
+      createdAt: new Date("2024-01-21"),
+    },
+  ],
+  "climate-action-urgency": [
+    {
+      id: "arg6",
+      questionId: "3",
+      side: "YES",
+      content: "Climate change is an existential threat. We're already seeing catastrophic effects. Every day of delay makes the problem worse. Economic concerns are secondary to survival.",
+      author: mockUsers[3],
+      upvotes: 456,
+      downvotes: 23,
+      createdAt: new Date("2024-01-26"),
+    },
+    {
+      id: "arg7",
+      questionId: "3",
+      side: "NO",
+      content: "While climate change is real, drastic immediate action could crash economies and harm the very people we're trying to help. A balanced, gradual transition is more sustainable and effective.",
+      author: mockUsers[1],
+      upvotes: 89,
+      downvotes: 234,
+      createdAt: new Date("2024-01-26"),
+    },
+  ],
+  "free-speech-limits": [
+    {
+      id: "arg8",
+      questionId: "4",
+      side: "YES",
+      content: "Hate speech, incitement to violence, and false information cause real harm. Free speech isn't absolute - we already have libel and slander laws. Reasonable limits protect vulnerable groups.",
+      author: mockUsers[0],
+      upvotes: 156,
+      downvotes: 98,
+      createdAt: new Date("2024-02-02"),
+    },
+    {
+      id: "arg9",
+      questionId: "4",
+      side: "NO",
+      content: "Free speech is a fundamental right. Once you start limiting it, who decides what's acceptable? History shows that speech restrictions are often used to silence dissent and maintain power.",
+      author: mockUsers[2],
+      upvotes: 289,
+      downvotes: 45,
+      createdAt: new Date("2024-02-02"),
+    },
+  ],
+  "remote-work-future": [
+    {
+      id: "arg10",
+      questionId: "5",
+      side: "YES",
+      content: "Remote work offers better work-life balance, reduces commute time, and allows access to global talent pools. Technology makes it seamless, and employees increasingly demand flexibility.",
+      author: mockUsers[4],
+      upvotes: 234,
+      downvotes: 67,
+      createdAt: new Date("2024-02-06"),
+    },
+    {
+      id: "arg11",
+      questionId: "5",
+      side: "NO",
+      content: "In-person collaboration is irreplaceable. Many companies are returning to office because remote work hurts culture, mentorship, and innovation. Hybrid models will dominate, not full remote.",
+      author: mockUsers[1],
+      upvotes: 198,
+      downvotes: 78,
+      createdAt: new Date("2024-02-06"),
+    },
+  ],
+};
+
+export const mockLeaderboardUsers: User[] = [
+  ...mockUsers,
+  { 
+    id: "6", 
+    username: "frank_debater", 
+    points: 750, 
+    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "7", 
+    username: "grace_thinker", 
+    points: 680, 
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "8", 
+    username: "henry_logical", 
+    points: 620, 
+    avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "9", 
+    username: "ivy_analyst", 
+    points: 590, 
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&crop=face" 
+  },
+  { 
+    id: "10", 
+    username: "jack_wise", 
+    points: 540, 
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face" 
+  },
+].sort((a, b) => b.points - a.points);
