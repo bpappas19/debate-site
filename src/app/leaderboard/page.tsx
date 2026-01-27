@@ -1,69 +1,141 @@
 "use client";
 
-import { useState } from "react";
-import { mockLeaderboardUsers } from "@/lib/mock";
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import { mockLeaderboardUsers, LeaderboardUser } from "@/lib/mock";
+import { mockQuestions } from "@/lib/mock";
 import { Category } from "@/lib/types";
-
-// Extended user data for leaderboard display
-interface LeaderboardUser {
-  id: string;
-  username: string;
-  avatar?: string;
-  points: number;
-  winRate: number;
-  resolvedTakes: number;
-  bestCategory: Category;
-}
-
-// Mock extended data - in real app this would come from backend
-const getLeaderboardData = (): LeaderboardUser[] => {
-  const categories: Category[] = [
-    "Technology",
-    "Politics",
-    "Science",
-    "Philosophy",
-    "Society",
-    "Economics",
-  ];
-  
-  return mockLeaderboardUsers.map((user, index) => ({
-    ...user,
-    winRate: 90 - index * 2.5 + Math.random() * 5, // Mock win rate
-    resolvedTakes: Math.floor(500 + index * 200 + Math.random() * 1000),
-    bestCategory: categories[index % categories.length],
-  }));
-};
+import { FEATURES } from "@/lib/features";
 
 export default function LeaderboardPage() {
-  const [timeFilter, setTimeFilter] = useState<"30days" | "alltime" | "category">("30days");
-  const leaderboardData = getLeaderboardData();
-  
+  const [timeFilter, setTimeFilter] = useState<"7days" | "30days" | "alltime">("30days");
+  const [selectedCategory, setSelectedCategory] = useState<Category | "all">("all");
+
+  // Get upvotes based on time filter
+  const getUpvotes = (user: LeaderboardUser) => {
+    switch (timeFilter) {
+      case "7days":
+        return user.upvotes7d;
+      case "30days":
+        return user.upvotes30d;
+      case "alltime":
+        return user.upvotesAllTime;
+    }
+  };
+
+  // Sort and filter leaderboard data
+  const leaderboardData = useMemo(() => {
+    let data = [...mockLeaderboardUsers].sort((a, b) => getUpvotes(b) - getUpvotes(a));
+    
+    // Filter by category if needed (optional - can be based on top take category)
+    if (selectedCategory !== "all") {
+      // For now, just return all data since we don't have category on users
+      // In a real app, you'd filter by the category of their top take or most active category
+    }
+    
+    return data;
+  }, [timeFilter, selectedCategory]);
+
   // Top 3 for podium
   const topThree = leaderboardData.slice(0, 3);
   const restOfUsers = leaderboardData.slice(3);
 
-  const getCategoryColor = (category: Category) => {
-    const colors: Record<Category, { bg: string; text: string }> = {
-      Technology: { bg: "bg-indigo-50 dark:bg-indigo-900/20", text: "text-indigo-600 dark:text-indigo-400" },
-      Politics: { bg: "bg-red-50 dark:bg-red-900/20", text: "text-red-600 dark:text-red-400" },
-      Science: { bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-600 dark:text-blue-400" },
-      Philosophy: { bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-600 dark:text-purple-400" },
-      Society: { bg: "bg-green-50 dark:bg-green-900/20", text: "text-green-600 dark:text-green-400" },
-      Economics: { bg: "bg-orange-50 dark:bg-orange-900/20", text: "text-orange-600 dark:text-orange-400" },
-    };
-    return colors[category] || colors.Technology;
+  // Get top takes (most upvoted arguments)
+  const topTakes = useMemo(() => {
+    const allTakes: Array<{
+      snippet: string;
+      side: "YES" | "NO";
+      slug: string;
+      upvotes: number;
+      questionTitle: string;
+    }> = [];
+
+    mockLeaderboardUsers.forEach((user) => {
+      if (user.topTakeSnippet && user.topTakeSlug && user.topTakeUpvotes) {
+        const question = mockQuestions.find((q) => q.slug === user.topTakeSlug);
+        if (question) {
+          allTakes.push({
+            snippet: user.topTakeSnippet,
+            side: user.topTakeSide || "YES",
+            slug: user.topTakeSlug,
+            upvotes: user.topTakeUpvotes,
+            questionTitle: question.title,
+          });
+        }
+      }
+    });
+
+    return allTakes.sort((a, b) => b.upvotes - a.upvotes).slice(0, 5);
+  }, []);
+
+  const formatUpvotes = (upvotes: number) => {
+    if (upvotes >= 1000) {
+      return `${(upvotes / 1000).toFixed(1)}k`;
+    }
+    return upvotes.toLocaleString();
   };
 
+  if (!FEATURES.leaderboard) {
+    return (
+      <main className="py-16 flex flex-col items-center justify-center text-center px-4">
+        <div className="relative max-w-xl w-full">
+          <div className="absolute -inset-1 bg-gradient-to-r from-[#135bec] via-[#6366f1] to-[#22c55e] opacity-40 blur-3xl rounded-[32px]" />
+          <div className="relative bg-white/90 dark:bg-[#020617]/90 border border-slate-200/80 dark:border-slate-800/80 rounded-[28px] px-8 py-10 shadow-2xl backdrop-blur">
+            <div className="inline-flex items-center justify-center rounded-2xl bg-[#135bec]/10 text-[#135bec] mb-4 px-3 py-1 text-xs font-bold tracking-wide uppercase">
+              <span className="material-symbols-outlined text-base mr-1">emoji_events</span>
+              Coming Soon
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black text-[#020617] dark:text-white mb-3 tracking-tight">
+              Global Debater Leaderboard
+            </h1>
+            <p className="text-sm md:text-base text-[#4c669a] dark:text-[#94a3b8] max-w-md mx-auto mb-6">
+              {/* Hidden for MVP — enable by flipping feature flag */}
+            We&apos;re polishing the ranking system that highlights the sharpest minds in the community.
+              Track streaks, upvotes, and impact across every debate.
+            </p>
+            <div className="flex items-center justify-center gap-3 mb-8 text-xs text-[#4c669a] dark:text-slate-400">
+              <div className="flex items-center gap-1">
+                <span className="material-symbols-outlined !text-base text-amber-400">workspace_premium</span>
+                <span>Seasonal rankings</span>
+              </div>
+              <span className="text-slate-400">•</span>
+              <div className="flex items-center gap-1">
+                <span className="material-symbols-outlined !text-base text-emerald-400">bolt</span>
+                <span>Skill-based tiers</span>
+              </div>
+              <span className="text-slate-400">•</span>
+              <div className="flex items-center gap-1">
+                <span className="material-symbols-outlined !text-base text-sky-400">insights</span>
+                <span>Deep stats</span>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#135bec] text-white text-sm font-bold shadow-lg shadow-[#135bec]/30 hover:bg-[#135bec]/90 transition-colors"
+              >
+                Back to Active Debates
+                <span className="material-symbols-outlined text-base ml-1">trending_flat</span>
+              </Link>
+              <div className="text-[11px] text-[#4c669a] dark:text-[#94a3b8]">
+                Watch this space — leaderboard launches after MVP.
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
-    <main className="max-w-[1200px] mx-auto px-6 py-10">
+    <main className="py-10">
       {/* Page Heading */}
       <div className="mb-12 text-center">
         <h1 className="text-5xl font-black tracking-tight mb-4 text-[#0d121b] dark:text-white">
           Debater Leaderboard
         </h1>
         <p className="text-[#4c669a] dark:text-[#94a3b8] text-lg max-w-2xl mx-auto">
-          Analyze the top performers in global betting, stock predictions, and
-          high-stakes market debates.
+          Top debaters by community votes.
         </p>
       </div>
 
@@ -92,10 +164,10 @@ export default function LeaderboardPage() {
               </span>
               <p className="font-bold text-lg mb-1 truncate">{topThree[1].username}</p>
               <p className="text-[#135bec] font-extrabold text-xl">
-                {topThree[1].winRate.toFixed(1)}%
+                {formatUpvotes(getUpvotes(topThree[1]))}
               </p>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">
-                Win Rate
+                Upvotes
               </p>
             </div>
           </div>
@@ -133,10 +205,10 @@ export default function LeaderboardPage() {
                 {topThree[0].username}
               </p>
               <p className="text-white font-black text-3xl">
-                {topThree[0].winRate.toFixed(1)}%
+                {formatUpvotes(getUpvotes(topThree[0]))}
               </p>
               <p className="text-[10px] text-white/60 font-bold uppercase mt-2">
-                Win Rate
+                Upvotes
               </p>
             </div>
           </div>
@@ -165,10 +237,10 @@ export default function LeaderboardPage() {
               </span>
               <p className="font-bold text-lg mb-1 truncate">{topThree[2].username}</p>
               <p className="text-[#135bec] font-extrabold text-xl">
-                {topThree[2].winRate.toFixed(1)}%
+                {formatUpvotes(getUpvotes(topThree[2]))}
               </p>
               <p className="text-[10px] text-slate-400 font-bold uppercase mt-2">
-                Win Rate
+                Upvotes
               </p>
             </div>
           </div>
@@ -179,6 +251,16 @@ export default function LeaderboardPage() {
       <div className="bg-white dark:bg-[#1a2133] rounded-xl shadow-sm border border-[#e7ebf3] dark:border-[#2d3748] mb-8 overflow-hidden">
         <div className="flex items-center justify-between px-6 border-b border-[#e7ebf3] dark:border-[#2d3748]">
           <div className="flex gap-8">
+            <button
+              onClick={() => setTimeFilter("7days")}
+              className={`py-5 border-b-2 font-bold text-sm tracking-wide transition-colors ${
+                timeFilter === "7days"
+                  ? "border-[#135bec] text-[#135bec]"
+                  : "border-transparent text-[#4c669a] dark:text-[#94a3b8] hover:text-[#135bec]"
+              }`}
+            >
+              7 DAYS
+            </button>
             <button
               onClick={() => setTimeFilter("30days")}
               className={`py-5 border-b-2 font-bold text-sm tracking-wide transition-colors ${
@@ -199,22 +281,21 @@ export default function LeaderboardPage() {
             >
               ALL-TIME
             </button>
-            <button
-              onClick={() => setTimeFilter("category")}
-              className={`py-5 border-b-2 font-bold text-sm tracking-wide transition-colors ${
-                timeFilter === "category"
-                  ? "border-[#135bec] text-[#135bec]"
-                  : "border-transparent text-[#4c669a] dark:text-[#94a3b8] hover:text-[#135bec]"
-              }`}
-            >
-              BY CATEGORY
-            </button>
           </div>
           <div className="flex gap-4">
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-              <span className="material-symbols-outlined text-lg">filter_list</span>
-              Filter
-            </button>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as Category | "all")}
+              className="px-3 py-1.5 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] text-sm font-medium bg-white dark:bg-[#1a2133] text-[#0d121b] dark:text-white cursor-pointer"
+            >
+              <option value="all">All Categories</option>
+              <option value="Technology">Technology</option>
+              <option value="Economics">Economics</option>
+              <option value="Science">Science</option>
+              <option value="Philosophy">Philosophy</option>
+              <option value="Society">Society</option>
+              <option value="Politics">Politics</option>
+            </select>
           </div>
         </div>
 
@@ -224,17 +305,16 @@ export default function LeaderboardPage() {
             <thead>
               <tr className="bg-slate-50 dark:bg-[#161d2b] text-[#4c669a] dark:text-slate-400 text-[11px] font-bold uppercase tracking-wider">
                 <th className="px-8 py-4">Rank</th>
-                <th className="px-6 py-4">Username</th>
-                <th className="px-6 py-4">Win Rate</th>
-                <th className="px-6 py-4">Resolved Takes</th>
-                <th className="px-6 py-4">Best Category</th>
+                <th className="px-6 py-4">User</th>
+                <th className="px-6 py-4">Upvotes</th>
+                <th className="px-6 py-4">Top Argument</th>
+                <th className="px-6 py-4">Debates</th>
                 <th className="px-8 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#e7ebf3] dark:divide-[#2d3748]">
               {restOfUsers.map((user, index) => {
                 const rank = index + 4;
-                const categoryColor = getCategoryColor(user.bestCategory);
                 return (
                   <tr
                     key={user.id}
@@ -264,18 +344,29 @@ export default function LeaderboardPage() {
                     </td>
                     <td className="px-6 py-5 text-sm">
                       <span className="font-black text-[#059669]">
-                        {user.winRate.toFixed(1)}%
+                        {formatUpvotes(getUpvotes(user))}
                       </span>
+                    </td>
+                    <td className="px-6 py-5 text-sm text-[#4c669a] dark:text-[#94a3b8] max-w-xs">
+                      {user.topTakeSnippet ? (
+                        <div>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mr-2 ${
+                              user.topTakeSide === "YES"
+                                ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400"
+                                : "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400"
+                            }`}
+                          >
+                            {user.topTakeSide}
+                          </span>
+                          <span className="line-clamp-1">{user.topTakeSnippet}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-5 text-sm text-[#4c669a] dark:text-[#94a3b8]">
-                      {user.resolvedTakes.toLocaleString()} Takes
-                    </td>
-                    <td className="px-6 py-5">
-                      <span
-                        className={`${categoryColor.bg} ${categoryColor.text} text-[10px] font-bold px-2.5 py-1 rounded-full uppercase`}
-                      >
-                        {user.bestCategory}
-                      </span>
+                      {user.debatesCount}
                     </td>
                     <td className="px-8 py-5 text-right">
                       <button className="text-[#135bec] font-bold text-xs hover:underline">
@@ -305,56 +396,88 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
+      {/* Top Takes Section */}
+      {topTakes.length > 0 && (
+        <div className="bg-white dark:bg-[#1a2133] rounded-xl shadow-sm border border-[#e7ebf3] dark:border-[#2d3748] p-8 mb-8">
+          <h2 className="text-2xl font-black mb-6 text-[#0d121b] dark:text-white">
+            Top Takes
+          </h2>
+          <div className="space-y-4">
+            {topTakes.map((take, index) => (
+              <div
+                key={index}
+                className="p-4 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          take.side === "YES"
+                            ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400"
+                            : "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400"
+                        }`}
+                      >
+                        {take.side}
+                      </span>
+                      <span className="text-xs text-[#4c669a] dark:text-slate-400">
+                        {take.upvotes.toLocaleString()} upvotes
+                      </span>
+                    </div>
+                    <p className="text-sm text-[#0d121b] dark:text-white mb-2 line-clamp-2">
+                      {take.snippet}
+                    </p>
+                    <Link
+                      href={`/q/${take.slug}`}
+                      className="text-sm text-[#135bec] hover:underline font-medium"
+                    >
+                      {take.questionTitle}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Footer Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-[#1a2133] p-6 rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm">
           <p className="text-[10px] font-black uppercase text-[#4c669a] dark:text-[#94a3b8] tracking-widest mb-1">
-            Platform Avg Win Rate
+            Total Upvotes
           </p>
-          <p className="text-2xl font-black text-[#0d121b] dark:text-white">52.4%</p>
+          <p className="text-2xl font-black text-[#0d121b] dark:text-white">
+            {mockLeaderboardUsers
+              .reduce((sum, user) => sum + user.upvotesAllTime, 0)
+              .toLocaleString()}
+          </p>
         </div>
         <div className="bg-white dark:bg-[#1a2133] p-6 rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm">
           <p className="text-[10px] font-black uppercase text-[#4c669a] dark:text-[#94a3b8] tracking-widest mb-1">
-            Total Takes Resolved
+            Active Debaters
           </p>
-          <p className="text-2xl font-black text-[#0d121b] dark:text-white">842,910</p>
+          <p className="text-2xl font-black text-[#0d121b] dark:text-white">
+            {mockLeaderboardUsers.length}
+          </p>
         </div>
         <div className="bg-white dark:bg-[#1a2133] p-6 rounded-xl border border-[#e7ebf3] dark:border-[#2d3748] shadow-sm">
           <p className="text-[10px] font-black uppercase text-[#4c669a] dark:text-[#94a3b8] tracking-widest mb-1">
-            Top Category Growth
+            Total Debates
           </p>
           <p className="text-2xl font-black text-[#135bec]">
-            +12.4% <span className="text-xs font-medium text-slate-400 ml-1">in Stocks</span>
+            {mockLeaderboardUsers.reduce((sum, user) => sum + user.debatesCount, 0)}
           </p>
         </div>
       </div>
 
       {/* Footer */}
       <footer className="mt-20 py-10 border-t border-[#e7ebf3] dark:border-[#2d3748]">
-        <div className="max-w-[1200px] mx-auto px-6 flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2 opacity-50 grayscale">
-            <div className="size-6 text-slate-800 dark:text-white">
-              <svg
-                fill="none"
-                viewBox="0 0 48 48"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  clipRule="evenodd"
-                  d="M24 18.4228L42 11.475V34.3663C42 34.7796 41.7457 35.1504 41.3601 35.2992L24 42V18.4228Z"
-                  fill="currentColor"
-                  fillRule="evenodd"
-                ></path>
-              </svg>
-            </div>
-            <span className="font-bold text-sm tracking-tighter text-[#0d121b] dark:text-white">
-              SideQuest
-            </span>
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-[11px] text-[#4c669a] dark:text-[#94a3b8] font-medium tracking-wide">
+              © 2024 Debate Platform. Engage thoughtfully.
+            </p>
           </div>
-          <p className="text-[11px] text-[#4c669a] dark:text-[#94a3b8] font-medium tracking-wide">
-            © 2024 SideQuest Analytics. All betting involves risk. Trade responsibly.
-          </p>
-        </div>
       </footer>
     </main>
   );

@@ -222,36 +222,150 @@ export const mockArgumentsBySlug: Record<string, Argument[]> = {
   ],
 };
 
-export const mockLeaderboardUsers: User[] = [
-  ...mockUsers,
-  { 
-    id: "6", 
-    username: "frank_debater", 
-    points: 750, 
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face" 
+// Extended leaderboard user data
+export interface LeaderboardUser {
+  id: string;
+  username: string;
+  avatar?: string;
+  upvotes7d: number;
+  upvotes30d: number;
+  upvotesAllTime: number;
+  debatesCount: number;
+  topTakeSnippet?: string;
+  topTakeSlug?: string;
+  topTakeSide?: "YES" | "NO";
+  topTakeUpvotes?: number;
+}
+
+export const mockLeaderboardUsers: LeaderboardUser[] = [
+  {
+    id: "1",
+    username: "alice_debater",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 1240,
+    upvotes30d: 8450,
+    upvotesAllTime: 12450,
+    debatesCount: 47,
+    topTakeSnippet: "AI regulation is essential to prevent misuse and ensure ethical development...",
+    topTakeSlug: "should-ai-be-regulated",
+    topTakeSide: "YES",
+    topTakeUpvotes: 312,
   },
-  { 
-    id: "7", 
-    username: "grace_thinker", 
-    points: 680, 
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face" 
+  {
+    id: "2",
+    username: "bob_thinker",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 980,
+    upvotes30d: 7200,
+    upvotesAllTime: 11200,
+    debatesCount: 38,
+    topTakeSnippet: "Free speech is a fundamental right. Once you start limiting it...",
+    topTakeSlug: "free-speech-limits",
+    topTakeSide: "NO",
+    topTakeUpvotes: 289,
   },
-  { 
-    id: "8", 
-    username: "henry_logical", 
-    points: 620, 
-    avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face" 
+  {
+    id: "3",
+    username: "charlie_logical",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 1100,
+    upvotes30d: 8100,
+    upvotesAllTime: 11800,
+    debatesCount: 42,
+    topTakeSnippet: "UBI provides a safety net for everyone, especially as automation displaces workers...",
+    topTakeSlug: "universal-basic-income",
+    topTakeSide: "YES",
+    topTakeUpvotes: 278,
   },
-  { 
-    id: "9", 
-    username: "ivy_analyst", 
-    points: 590, 
-    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&crop=face" 
+  {
+    id: "4",
+    username: "diana_wise",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 920,
+    upvotes30d: 6800,
+    upvotesAllTime: 10200,
+    debatesCount: 35,
+    topTakeSnippet: "Climate change is an existential threat. We're already seeing catastrophic effects...",
+    topTakeSlug: "climate-action-urgency",
+    topTakeSide: "YES",
+    topTakeUpvotes: 456,
   },
-  { 
-    id: "10", 
-    username: "jack_wise", 
-    points: 540, 
-    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face" 
+  {
+    id: "5",
+    username: "eve_analyst",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 750,
+    upvotes30d: 5400,
+    upvotesAllTime: 8900,
+    debatesCount: 28,
+    topTakeSnippet: "Remote work offers better work-life balance, reduces commute time...",
+    topTakeSlug: "remote-work-future",
+    topTakeSide: "YES",
+    topTakeUpvotes: 234,
   },
-].sort((a, b) => b.points - a.points);
+  {
+    id: "6",
+    username: "frank_debater",
+    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 680,
+    upvotes30d: 4800,
+    upvotesAllTime: 7500,
+    debatesCount: 24,
+    topTakeSnippet: "Heavy regulation will stifle innovation and slow down progress...",
+    topTakeSlug: "should-ai-be-regulated",
+    topTakeSide: "NO",
+    topTakeUpvotes: 189,
+  },
+  {
+    id: "7",
+    username: "grace_thinker",
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 620,
+    upvotes30d: 4200,
+    upvotesAllTime: 6800,
+    debatesCount: 22,
+    topTakeSnippet: "UBI is economically unsustainable and would disincentivize work...",
+    topTakeSlug: "universal-basic-income",
+    topTakeSide: "NO",
+    topTakeUpvotes: 201,
+  },
+  {
+    id: "8",
+    username: "henry_logical",
+    avatar: "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 580,
+    upvotes30d: 3900,
+    upvotesAllTime: 6200,
+    debatesCount: 20,
+    topTakeSnippet: "While climate change is real, drastic immediate action could crash economies...",
+    topTakeSlug: "climate-action-urgency",
+    topTakeSide: "NO",
+    topTakeUpvotes: 89,
+  },
+  {
+    id: "9",
+    username: "ivy_analyst",
+    avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 540,
+    upvotes30d: 3600,
+    upvotesAllTime: 5900,
+    debatesCount: 18,
+    topTakeSnippet: "Hate speech, incitement to violence, and false information cause real harm...",
+    topTakeSlug: "free-speech-limits",
+    topTakeSide: "YES",
+    topTakeUpvotes: 156,
+  },
+  {
+    id: "10",
+    username: "jack_wise",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
+    upvotes7d: 490,
+    upvotes30d: 3300,
+    upvotesAllTime: 5400,
+    debatesCount: 16,
+    topTakeSnippet: "In-person collaboration is irreplaceable. Many companies are returning to office...",
+    topTakeSlug: "remote-work-future",
+    topTakeSide: "NO",
+    topTakeUpvotes: 198,
+  },
+].sort((a, b) => b.upvotesAllTime - a.upvotesAllTime);

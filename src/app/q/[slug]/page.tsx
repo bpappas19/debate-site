@@ -24,39 +24,8 @@ export default async function Page({
   const yesArguments = arguments_.filter((arg) => arg.side === "YES");
   const noArguments = arguments_.filter((arg) => arg.side === "NO");
 
-  function getTimeRemaining(createdAt: Date): string {
-    const now = new Date();
-    const diff = createdAt.getTime() - now.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const months = Math.floor(days / 30);
-
-    if (months > 0) {
-      const monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      const targetDate = new Date(createdAt);
-      targetDate.setMonth(targetDate.getMonth() + 1);
-      return `Ends ${monthNames[targetDate.getMonth()]} ${targetDate.getFullYear()}`;
-    } else if (days > 0) {
-      return `Ends in ${days} day${days !== 1 ? "s" : ""}`;
-    } else {
-      return "Ending soon";
-    }
-  }
-
   return (
-    <main className="max-w-[1440px] mx-auto px-4 md:px-10 py-6">
+    <main className="py-6">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-2 mb-4">
         <Link
@@ -88,8 +57,7 @@ export default async function Page({
               {q.resolved ? "Resolved" : "Open"}
             </span>
             <p className="text-[#4c669a] dark:text-[#94a3b8] text-sm font-medium">
-              Volume: {q.totalVotes.toLocaleString()} votes •{" "}
-              {getTimeRemaining(q.createdAt)}
+              Volume: {q.totalVotes.toLocaleString()} votes
             </p>
           </div>
         </div>
@@ -193,7 +161,7 @@ export default async function Page({
       {/* Sticky Floating CTA */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
         <Link
-          href={`/create?slug=${slug}`}
+          href={`/q/${slug}/post`}
           className="flex items-center gap-3 bg-[#135bec] text-white px-8 py-4 rounded-full font-bold shadow-2xl hover:scale-105 transition-transform active:scale-95 group"
         >
           <span className="material-symbols-outlined bg-white/20 p-1 rounded-full text-white">
@@ -206,7 +174,7 @@ export default async function Page({
       {/* Footer Space */}
       <footer className="mt-20 py-10 border-t border-[#e7ebf3] dark:border-[#2d3748] text-center">
         <p className="text-[#4c669a] dark:text-[#94a3b8] text-sm">
-          © 2024 SideQuest Debate Platform. Engage thoughtfully.
+          © 2024 Debate Platform. Engage thoughtfully.
         </p>
       </footer>
     </main>

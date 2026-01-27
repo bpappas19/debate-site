@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Menu } from "lucide-react";
 import { useUI } from "@/contexts/UIContext";
 
 export default function NavBar() {
@@ -9,25 +10,17 @@ export default function NavBar() {
   const { sidebarOpen, toggleSidebar } = useUI();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-6 py-3">
-      <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-8">
-        {/* Logo & Brand */}
+    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-4 lg:px-6 py-3">
+      <div className="w-full flex items-center justify-between gap-8">
+        {/* Menu & Brand */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggleSidebar}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="h-10 w-10 rounded-xl hover:bg-slate-800/60 dark:hover:bg-slate-800/60 flex items-center justify-center transition-colors"
             aria-label="Toggle sidebar"
           >
-            <span className="material-symbols-outlined">view_sidebar</span>
+            <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           </button>
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="bg-[#135bec] text-white p-1.5 rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined !text-2xl">query_stats</span>
-          </div>
-            <h2 className="text-xl font-bold tracking-tight text-[#0d121b] dark:text-white">
-              SideQuest
-            </h2>
-          </Link>
         </div>
 
         {/* Search Bar */}

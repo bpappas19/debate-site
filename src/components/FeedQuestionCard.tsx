@@ -32,22 +32,6 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
   },
 };
 
-function getTimeRemaining(createdAt: Date): string {
-  const now = new Date();
-  const diff = now.getTime() - createdAt.getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (days > 0) {
-    return `Ends in ${days} day${days !== 1 ? "s" : ""}`;
-  } else if (hours > 0) {
-    return `${hours}h ${minutes}m left`;
-  } else {
-    return `${minutes}m left`;
-  }
-}
-
 export default function FeedQuestionCard({
   question,
 }: FeedQuestionCardProps) {
@@ -63,11 +47,8 @@ export default function FeedQuestionCard({
     text: "text-gray-600 dark:text-gray-400",
   };
 
-  const timeRemaining = getTimeRemaining(question.createdAt);
-  const isUrgent = question.totalVotes > 1500;
-
   return (
-    <Link href={`/q/${question.slug}`} className="h-full flex">
+    <Link href={`/q/${question.slug}`} className="h-full flex flex-col">
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-lg transition-all flex flex-col group cursor-pointer h-full w-full">
         <div className="flex items-start justify-between mb-4">
           <span
@@ -75,18 +56,6 @@ export default function FeedQuestionCard({
           >
             {question.category}
           </span>
-          <div
-            className={`flex items-center gap-1.5 ${
-              isUrgent
-                ? "text-orange-600 dark:text-orange-400"
-                : "text-gray-500"
-            } text-xs font-semibold`}
-          >
-            <span className="material-symbols-outlined !text-sm">
-              {isUrgent ? "timer" : "calendar_today"}
-            </span>
-            <span>{timeRemaining}</span>
-          </div>
         </div>
 
         {/* Debate topic image */}

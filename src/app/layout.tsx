@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
+import AppLayout from "@/components/AppLayout";
 import { UIProvider } from "@/contexts/UIContext";
 
 const inter = Inter({
@@ -10,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SideQuest | Home Debate Feed",
+  title: "Debate Feed",
   description: "Engage in meaningful debates and share your perspective",
 };
 
@@ -28,11 +29,11 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} font-display antialiased bg-[#f6f6f8] dark:bg-[#101622] text-[#0d121b] dark:text-gray-100 min-h-screen`}
+        className={`${inter.variable} font-display antialiased bg-[#f6f6f8] dark:bg-[#101622] text-[#0d121b] dark:text-gray-100 min-h-screen w-full`}
       >
         <UIProvider>
           <NavBar />
-          <div className="w-full">{children}</div>
+          <AppLayout>{children}</AppLayout>
         </UIProvider>
       </body>
     </html>
