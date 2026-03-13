@@ -4,6 +4,7 @@ import "./globals.css";
 import NavBar from "@/components/NavBar";
 import AppLayout from "@/components/AppLayout";
 import { UIProvider } from "@/contexts/UIContext";
+import { DebatesProvider } from "@/contexts/DebatesContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -11,8 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Debate Feed",
-  description: "Engage in meaningful debates and share your perspective",
+  title: "Debate Stocks | Test Conviction. See Both Sides.",
+  description:
+    "The best place to test conviction on market ideas. Debate stocks, see bull and bear cases, and vote. Starting with stocks.",
 };
 
 export default function RootLayout({
@@ -32,8 +34,10 @@ export default function RootLayout({
         className={`${inter.variable} font-display antialiased bg-[#f6f6f8] dark:bg-[#101622] text-[#0d121b] dark:text-gray-100 min-h-screen w-full`}
       >
         <UIProvider>
-          <NavBar />
-          <AppLayout>{children}</AppLayout>
+          <DebatesProvider>
+            <NavBar />
+            <AppLayout>{children}</AppLayout>
+          </DebatesProvider>
         </UIProvider>
       </body>
     </html>

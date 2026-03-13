@@ -2,34 +2,34 @@
 
 import { useEffect, Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useUI } from "@/contexts/UIContext";
-import { Category } from "@/lib/types";
+import { CATEGORIES } from "@/lib/categories";
 import { FEATURES } from "@/lib/features";
-
-const categories: Category[] = ["Technology", "Economics", "Science", "Philosophy", "Society", "Politics"];
 
 function SidebarContent() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { sidebarOpen, setSidebarOpen } = useUI();
-  const selectedCategory = searchParams.get("category") as Category | null;
 
-  // Close sidebar on ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && sidebarOpen) {
-        setSidebarOpen(false);
-      }
+      if (e.key === "Escape" && sidebarOpen) setSidebarOpen(false);
     };
-
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, [sidebarOpen, setSidebarOpen]);
 
+  const categoryIcons: Record<string, string> = {
+    stocks: "show_chart",
+    crypto: "currency_bitcoin",
+    sports: "sports",
+    politics: "how_to_vote",
+    products: "shopping_bag",
+    culture: "palette",
+  };
+
   return (
     <>
-      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -37,18 +37,12 @@ function SidebarContent() {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`${
-          sidebarOpen
-            ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
-        } ${
-          sidebarOpen ? "lg:block" : "lg:hidden"
-        } fixed lg:sticky top-[57px] h-[calc(100vh-57px)] w-[280px] overflow-y-auto rounded-2xl border border-slate-800/60 dark:border-slate-800/60 bg-slate-950/40 dark:bg-slate-950/40 p-4 transition-all duration-200 z-50 lg:z-auto`}
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        } ${sidebarOpen ? "lg:block" : "lg:hidden"} fixed lg:sticky top-[57px] h-[calc(100vh-57px)] w-[280px] overflow-y-auto rounded-2xl border border-slate-800/60 dark:border-slate-800/60 bg-slate-950/40 dark:bg-slate-950/40 p-4 transition-all duration-200 z-50 lg:z-auto`}
       >
         <div className="space-y-6">
-          {/* Main Navigation */}
           <div className="space-y-2">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">
               Discovery
@@ -90,39 +84,35 @@ function SidebarContent() {
             </Link>
           </div>
 
-          {/* Categories */}
           <div className="space-y-2 mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">
               Categories
             </p>
-            {categories.map((category) => {
-              const isActive = selectedCategory === category;
-              const icons: Record<Category, string> = {
-                Technology: "memory",
-                Economics: "show_chart",
-                Science: "science",
-                Philosophy: "psychology",
-                Society: "groups",
-                Politics: "how_to_vote",
-              };
+            {CATEGORIES.map((category) => {
+              const isActive = pathname === `/category/${category.id}`;
+              const href = category.active ? `/category/${category.id}` : "#";
               return (
                 <Link
-                  key={category}
-                  href={`/?category=${category}`}
+                  key={category.id}
+                  href={href}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${
                     isActive
                       ? "text-[#135bec] bg-[#135bec]/10"
                       : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  }`}
+                  } ${!category.active ? "opacity-70 cursor-default" : ""}`}
                 >
-                  <span className="material-symbols-outlined">{icons[category]}</span>
-                  <span>{category}</span>
+                  <span className="material-symbols-outlined">
+                    {categoryIcons[category.id] ?? "folder"}
+                  </span>
+                  <span>{category.label}</span>
+                  {!category.active && (
+                    <span className="text-[10px] text-gray-500">soon</span>
+                  )}
                 </Link>
               );
             })}
           </div>
 
-          {/* Footer Sidebar */}
           {FEATURES.points && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
               <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl">
@@ -142,8 +132,6 @@ function SidebarContent() {
 }
 
 export default function Sidebar() {
-  const { sidebarOpen, setSidebarOpen } = useUI();
-
   return (
     <Suspense fallback={null}>
       <SidebarContent />

@@ -2,14 +2,14 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { mockLeaderboardUsers, LeaderboardUser } from "@/lib/mock";
-import { mockQuestions } from "@/lib/mock";
-import { Category } from "@/lib/types";
+import { mockLeaderboardUsers, mockDebates, LeaderboardUser } from "@/lib/mock";
+import { CATEGORIES } from "@/lib/categories";
+import type { CategoryType } from "@/lib/types";
 import { FEATURES } from "@/lib/features";
 
 export default function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState<"7days" | "30days" | "alltime">("30days");
-  const [selectedCategory, setSelectedCategory] = useState<Category | "all">("all");
+  const [selectedCategory, setSelectedCategory] = useState<CategoryType | "all">("all");
 
   // Get upvotes based on time filter
   const getUpvotes = (user: LeaderboardUser) => {
@@ -40,26 +40,30 @@ export default function LeaderboardPage() {
   const topThree = leaderboardData.slice(0, 3);
   const restOfUsers = leaderboardData.slice(3);
 
-  // Get top takes (most upvoted arguments)
+  // Get top takes (most upvoted arguments) — use new debate links
   const topTakes = useMemo(() => {
     const allTakes: Array<{
       snippet: string;
-      side: "YES" | "NO";
-      slug: string;
+      side: "PRO" | "CON";
+      categoryType: string;
+      entitySlug: string;
       upvotes: number;
-      questionTitle: string;
+      debateQuestion: string;
     }> = [];
 
     mockLeaderboardUsers.forEach((user) => {
-      if (user.topTakeSnippet && user.topTakeSlug && user.topTakeUpvotes) {
-        const question = mockQuestions.find((q) => q.slug === user.topTakeSlug);
-        if (question) {
+      if (user.topTakeSnippet && user.topTakeCategoryType && user.topTakeEntitySlug && user.topTakeUpvotes) {
+        const debate = mockDebates.find(
+          (d) => d.categoryType === user.topTakeCategoryType && d.symbolOrSlug === user.topTakeEntitySlug
+        );
+        if (debate) {
           allTakes.push({
             snippet: user.topTakeSnippet,
-            side: user.topTakeSide || "YES",
-            slug: user.topTakeSlug,
+            side: user.topTakeSide || "PRO",
+            categoryType: user.topTakeCategoryType,
+            entitySlug: user.topTakeEntitySlug,
             upvotes: user.topTakeUpvotes,
-            questionTitle: question.title,
+            debateQuestion: debate.debateQuestion,
           });
         }
       }
@@ -80,7 +84,7 @@ export default function LeaderboardPage() {
       <main className="py-16 flex flex-col items-center justify-center text-center px-4">
         <div className="relative max-w-xl w-full">
           <div className="absolute -inset-1 bg-gradient-to-r from-[#135bec] via-[#6366f1] to-[#22c55e] opacity-40 blur-3xl rounded-[32px]" />
-          <div className="relative bg-white/90 dark:bg-[#020617]/90 border border-slate-200/80 dark:border-slate-800/80 rounded-[28px] px-8 py-10 shadow-2xl backdrop-blur">
+          <div className="relative bg-white/90 dark:bg-[#020617]/90 border border-slate-200/80 dark:border-slate-800/80 rounded-[28px] px-8 py-10 shadow-2xl backdrop-blur flex flex-col items-center">
             <div className="inline-flex items-center justify-center rounded-2xl bg-[#135bec]/10 text-[#135bec] mb-4 px-3 py-1 text-xs font-bold tracking-wide uppercase">
               <span className="material-symbols-outlined text-base mr-1">emoji_events</span>
               Coming Soon
@@ -109,17 +113,22 @@ export default function LeaderboardPage() {
                 <span>Deep stats</span>
               </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-6 w-full flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => alert("Leaderboard coming soon")}
+                className="w-full md:w-auto min-w-[260px] h-14 text-white rounded-full text-lg font-black tracking-tight shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 bg-[#135bec] hover:bg-[#135bec]/90 shadow-[#135bec]/20"
+              >
+                Be first on the leaderboard
+                <span className="material-symbols-outlined">send</span>
+              </button>
               <Link
                 href="/"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#135bec] text-white text-sm font-bold shadow-lg shadow-[#135bec]/30 hover:bg-[#135bec]/90 transition-colors"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-xl text-[#135bec] text-xs font-bold hover:underline"
               >
                 Back to Active Debates
                 <span className="material-symbols-outlined text-base ml-1">trending_flat</span>
               </Link>
-              <div className="text-[11px] text-[#4c669a] dark:text-[#94a3b8]">
-                Watch this space — leaderboard launches after MVP.
-              </div>
             </div>
           </div>
         </div>
@@ -285,16 +294,13 @@ export default function LeaderboardPage() {
           <div className="flex gap-4">
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value as Category | "all")}
+              onChange={(e) => setSelectedCategory(e.target.value as CategoryType | "all")}
               className="px-3 py-1.5 rounded-lg border border-[#e7ebf3] dark:border-[#2d3748] text-sm font-medium bg-white dark:bg-[#1a2133] text-[#0d121b] dark:text-white cursor-pointer"
             >
               <option value="all">All Categories</option>
-              <option value="Technology">Technology</option>
-              <option value="Economics">Economics</option>
-              <option value="Science">Science</option>
-              <option value="Philosophy">Philosophy</option>
-              <option value="Society">Society</option>
-              <option value="Politics">Politics</option>
+              {CATEGORIES.filter((c) => c.active).map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -352,12 +358,12 @@ export default function LeaderboardPage() {
                         <div>
                           <span
                             className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mr-2 ${
-                              user.topTakeSide === "YES"
+                              user.topTakeSide === "PRO"
                                 ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400"
                                 : "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400"
                             }`}
                           >
-                            {user.topTakeSide}
+                            {user.topTakeSide === "PRO" ? "Bull" : "Bear"}
                           </span>
                           <span className="line-clamp-1">{user.topTakeSnippet}</span>
                         </div>
@@ -413,12 +419,12 @@ export default function LeaderboardPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          take.side === "YES"
+                          take.side === "PRO"
                             ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400"
                             : "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400"
                         }`}
                       >
-                        {take.side}
+                        {take.side === "PRO" ? "Bull" : "Bear"}
                       </span>
                       <span className="text-xs text-[#4c669a] dark:text-slate-400">
                         {take.upvotes.toLocaleString()} upvotes
@@ -428,10 +434,10 @@ export default function LeaderboardPage() {
                       {take.snippet}
                     </p>
                     <Link
-                      href={`/q/${take.slug}`}
+                      href={`/debate/${take.categoryType}/${take.entitySlug}`}
                       className="text-sm text-[#135bec] hover:underline font-medium"
                     >
-                      {take.questionTitle}
+                      {take.debateQuestion}
                     </Link>
                   </div>
                 </div>

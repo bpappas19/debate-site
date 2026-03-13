@@ -1,156 +1,162 @@
 "use client";
 
-import { useState, useMemo, Suspense, useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { mockQuestions } from "@/lib/mock";
-import FeedQuestionCard from "@/components/FeedQuestionCard";
+/**
+ * Homepage: stock-focused at launch. Hero, ticker search, trending / bull / bear / most active.
+ * Uses merged debates (mock + user-created) so new debates appear.
+ */
 import Link from "next/link";
-import { Category } from "@/lib/types";
+import { useMemo } from "react";
+import { useDebates } from "@/contexts/DebatesContext";
+import DebateCard from "@/components/DebateCard";
+import TickerSearch from "@/components/TickerSearch";
+import StockMetaBar from "@/components/StockMetaBar";
+import type { Debate } from "@/lib/types";
+import type { StockMetadata } from "@/lib/types";
 
-const categories: Category[] = ["Technology", "Economics", "Science", "Philosophy", "Society", "Politics"];
+function useStockDebates() {
+  const { getMergedDebates } = useDebates();
+  return useMemo(() => {
+    const all = getMergedDebates();
+    return all.filter((d) => d.categoryType === "stocks");
+  }, [getMergedDebates]);
+}
 
-function FeedContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const selectedCategory = searchParams.get("category") as Category | null;
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+function useTrending(stockDebates: Debate[]) {
+  return useMemo(() => {
+    return [...stockDebates]
+      .sort((a, b) => b.totalVotes - a.totalVotes)
+      .slice(0, 6);
+  }, [stockDebates]);
+}
 
-  const filteredQuestions = useMemo(() => {
-    if (!selectedCategory) {
-      return mockQuestions;
-    }
-    return mockQuestions.filter((q) => q.category === selectedCategory);
-  }, [selectedCategory]);
+function useTopBull(stockDebates: Debate[]) {
+  return useMemo(() => {
+    return [...stockDebates]
+      .filter((d) => d.totalVotes > 0)
+      .sort((a, b) => (b.proVotes / b.totalVotes) - (a.proVotes / a.totalVotes))
+      .slice(0, 3);
+  }, [stockDebates]);
+}
 
-  // Close dropdown on outside click or Escape key
-  useEffect(() => {
-    if (!isOpen) return;
+function useTopBear(stockDebates: Debate[]) {
+  return useMemo(() => {
+    return [...stockDebates]
+      .filter((d) => d.totalVotes > 0)
+      .sort((a, b) => (b.conVotes / b.totalVotes) - (a.conVotes / a.totalVotes))
+      .slice(0, 3);
+  }, [stockDebates]);
+}
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
+function useMostActive(
+  stockDebates: Debate[],
+  getMergedArguments: (debateId: string) => { length: number }
+) {
+  return useMemo(() => {
+    return [...stockDebates]
+      .map((d) => ({ debate: d, count: getMergedArguments(d.id).length }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+      .map((x) => x.debate);
+  }, [stockDebates, getMergedArguments]);
+}
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    // Use setTimeout to avoid immediate close on button click
-    const timeoutId = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 0);
-
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [isOpen]);
-
-  const handleSelect = (category: Category | null) => {
-    setIsOpen(false);
-    if (category) {
-      router.push(`/?category=${category}`);
-    } else {
-      router.push("/");
-    }
-  };
-
+function StockDebateCard({ debate }: { debate: Debate }) {
+  const meta = debate.categoryType === "stocks" && debate.metadata
+    ? <StockMetaBar meta={debate.metadata as unknown as StockMetadata} className="mb-2" />
+    : null;
   return (
-    <>
-      {/* Page Header & Filters */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Active Debates
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Predict the outcome and earn rewards.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 pb-2 md:pb-0">
-          <div className="relative" ref={dropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsOpen(!isOpen)}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:border-[#135bec] transition-all"
-            >
-              <span>{selectedCategory || "All Categories"}</span>
-              <span className={`material-symbols-outlined transition-transform ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
-            </button>
-            {isOpen && (
-              <div className="absolute top-full left-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 min-w-[180px] overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => handleSelect(null)}
-                  className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                    !selectedCategory
-                      ? "text-[#135bec] bg-[#135bec]/10"
-                      : "text-gray-700 dark:text-gray-300"
-                  }`}
-                >
-                  All Categories
-                </button>
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => handleSelect(category)}
-                    className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                      selectedCategory === category
-                        ? "text-[#135bec] bg-[#135bec]/10"
-                        : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <Link
-            href="/create"
-            className="flex items-center gap-2 px-4 py-2 bg-[#135bec] text-white rounded-lg shadow-sm hover:bg-[#135bec]/90 text-sm font-bold transition-all"
-          >
-            <span className="material-symbols-outlined">add</span>
-            <span>Create Debate</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Question Card Grid */}
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 items-stretch">
-        {filteredQuestions.map((question) => (
-          <FeedQuestionCard key={question.id} question={question} />
-        ))}
-      </div>
-
-      {/* Load More Button */}
-      <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-800">
-        <button className="w-full py-4 text-sm font-bold text-gray-500 hover:text-[#135bec] transition-colors bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl">
-          Load More Debates
-        </button>
-      </div>
-    </>
+    <DebateCard
+      debate={debate}
+      proLabel="Bull"
+      conLabel="Bear"
+      entityMeta={meta}
+    />
   );
 }
 
-export default function FeedPage() {
+export default function HomePage() {
+  const stockDebates = useStockDebates();
+  const { getMergedArguments } = useDebates();
+  const trending = useTrending(stockDebates);
+  const topBull = useTopBull(stockDebates);
+  const topBear = useTopBear(stockDebates);
+  const mostActive = useMostActive(stockDebates, getMergedArguments);
+
   return (
-    <Suspense fallback={
-      <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(340px,1fr))] items-stretch">
-        {mockQuestions.map((question) => (
-          <FeedQuestionCard key={question.id} question={question} />
-        ))}
+    <>
+      {/* Hero */}
+      <section className="mb-12 md:mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-8">
+          <h1 className="text-4xl md:text-5xl font-black text-[#0d121b] dark:text-white tracking-tight mb-4">
+            Debate Stocks. Test Conviction. See Both Sides.
+          </h1>
+          <p className="text-lg text-[#4c669a] dark:text-[#94a3b8] mb-2">
+            The best place to test conviction on market ideas.
+          </p>
+          <p className="text-sm text-[#4c669a] dark:text-[#94a3b8]">
+            Starting with stocks — more categories coming later.
+          </p>
+        </div>
+        <div className="max-w-xl mx-auto">
+          <TickerSearch placeholder="Search by ticker or company name..." />
+        </div>
+      </section>
+
+      {/* Trending stock debates */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white">
+            Trending Stock Debates
+          </h2>
+          <Link
+            href="/category/stocks"
+            className="text-sm font-bold text-[#135bec] hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          {trending.map((d) => (
+            <StockDebateCard key={d.id} debate={d} />
+          ))}
+        </div>
+      </section>
+
+      {/* Top bull / Top bear */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
+        <section>
+          <h2 className="text-xl font-bold text-[#0d121b] dark:text-white mb-4">
+            Top Bull Cases
+          </h2>
+          <div className="space-y-4">
+            {topBull.map((d) => (
+              <StockDebateCard key={d.id} debate={d} />
+            ))}
+          </div>
+        </section>
+        <section>
+          <h2 className="text-xl font-bold text-[#0d121b] dark:text-white mb-4">
+            Top Bear Cases
+          </h2>
+          <div className="space-y-4">
+            {topBear.map((d) => (
+              <StockDebateCard key={d.id} debate={d} />
+            ))}
+          </div>
+        </section>
       </div>
-    }>
-      <FeedContent />
-    </Suspense>
+
+      {/* Most active debates */}
+      <section className="mb-10">
+        <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white mb-6">
+          Most Active Debates
+        </h2>
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
+          {mostActive.map((d) => (
+            <StockDebateCard key={d.id} debate={d} />
+          ))}
+        </div>
+      </section>
+    </>
   );
 }

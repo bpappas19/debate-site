@@ -1,38 +1,51 @@
-import { Argument } from "@/lib/types";
-import Link from "next/link";
+/**
+ * Generic argument card. Accepts PRO/CON/HOLD and optional display labels
+ * (e.g. Bull/Bear/Hold for stocks, For/Against for other categories).
+ */
+import type { Argument } from "@/lib/types";
 
 interface ArgumentCardProps {
   argument: Argument;
+  /** Optional side labels, e.g. { PRO: "Bull", CON: "Bear", HOLD: "Hold" } */
+  sideLabels?: { PRO: string; CON: string; HOLD: string };
 }
 
-export default function ArgumentCard({ argument }: ArgumentCardProps) {
-  const sideColor =
-    argument.side === "YES"
-      ? "border-[#22c55e]"
-      : "border-[#ef4444]";
-  const sideTextColor =
-    argument.side === "YES"
-      ? "text-[#22c55e]"
-      : "text-[#ef4444]";
-  const sideHoverColor =
-    argument.side === "YES"
-      ? "hover:bg-[#22c55e]/10"
-      : "hover:bg-[#ef4444]/10";
+const defaultSideLabels = { PRO: "Pro", CON: "Con", HOLD: "Hold" };
+
+export default function ArgumentCard({
+  argument,
+  sideLabels = defaultSideLabels,
+}: ArgumentCardProps) {
+  const label = sideLabels[argument.side];
+  const isPro = argument.side === "PRO";
+  const isCon = argument.side === "CON";
+  const isHold = argument.side === "HOLD";
+
+  const sideColor = isPro
+    ? "border-[#22c55e]"
+    : isCon
+      ? "border-[#ef4444]"
+      : "border-amber-500";
+  const sideTextColor = isPro
+    ? "text-[#22c55e]"
+    : isCon
+      ? "text-[#ef4444]"
+      : "text-amber-600 dark:text-amber-400";
+  const sideHoverColor = isPro
+    ? "hover:bg-[#22c55e]/10"
+    : isCon
+      ? "hover:bg-[#ef4444]/10"
+      : "hover:bg-amber-500/10";
 
   const timeAgo = (date: Date): string => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
-
-    if (days > 0) {
-      return `${days} day${days !== 1 ? "s" : ""} ago`;
-    } else if (hours > 0) {
-      return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
-    } else {
-      const minutes = Math.floor(diff / (1000 * 60));
-      return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
-    }
+    if (days > 0) return `${days} day${days !== 1 ? "s" : ""} ago`;
+    if (hours > 0) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+    const minutes = Math.floor(diff / (1000 * 60));
+    return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
   };
 
   return (
@@ -40,23 +53,31 @@ export default function ArgumentCard({ argument }: ArgumentCardProps) {
       className={`bg-white dark:bg-[#1a2133] rounded-xl p-5 border-l-4 ${sideColor} shadow-sm hover:shadow-md transition-shadow`}
     >
       <div className="flex items-center gap-3 mb-4">
-        <div 
+        <div
           className="size-10 rounded-full bg-gray-300 dark:bg-gray-700 flex items-center justify-center text-lg bg-cover bg-center"
           style={
-            argument.author.avatar && argument.author.avatar.startsWith("http")
+            argument.author.avatar?.startsWith("http")
               ? { backgroundImage: `url(${argument.author.avatar})` }
               : undefined
           }
         >
-          {argument.author.avatar && !argument.author.avatar.startsWith("http") && (
-            argument.author.avatar
-          )}
-          {!argument.author.avatar && "👤"}
+          {!argument.author.avatar?.startsWith("http") && (argument.author.avatar || "👤")}
         </div>
         <div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm text-[#0d121b] dark:text-white">
               {argument.author.username}
+            </span>
+            <span
+              className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase ${
+                isPro
+                  ? "bg-[#22c55e]/10 text-[#22c55e]"
+                  : isCon
+                    ? "bg-[#ef4444]/10 text-[#ef4444]"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              }`}
+            >
+              {label}
             </span>
             {argument.upvotes > 200 && (
               <span className="bg-[#135bec]/10 text-[#135bec] text-[10px] font-black px-1.5 py-0.5 rounded uppercase">
@@ -78,7 +99,7 @@ export default function ArgumentCard({ argument }: ArgumentCardProps) {
             className={`flex items-center gap-1.5 ${sideTextColor} ${sideHoverColor} px-2 py-1 rounded transition-colors`}
           >
             <span className="material-symbols-outlined">
-              {argument.side === "YES" ? "thumb_up" : "thumb_down"}
+              {isPro ? "thumb_up" : isCon ? "thumb_down" : "remove"}
             </span>
             <span className="text-sm font-bold">{argument.upvotes}</span>
           </button>
@@ -87,9 +108,6 @@ export default function ArgumentCard({ argument }: ArgumentCardProps) {
             <span className="text-sm font-bold">0</span>
           </button>
         </div>
-        <button className="text-[#4c669a] dark:text-[#94a3b8] hover:text-[#0d121b] dark:hover:text-white">
-          <span className="material-symbols-outlined">more_horiz</span>
-        </button>
       </div>
     </div>
   );
