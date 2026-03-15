@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Homepage: stock-focused at launch. Hero, ticker search, trending / bull / bear / most active.
- * Fetches a limited set of debates (ordered by created_at) for display and search.
+ * Homepage: stock-focused at launch. Single eligible debate pool; sections derived from that pool.
+ * Data: real merged debate data from fetchHomeDebates (Supabase). Same inclusion logic as category.
  */
 import Link from "next/link";
 import { useMemo, useEffect } from "react";
@@ -10,87 +10,170 @@ import { useDebates } from "@/contexts/DebatesContext";
 import DebateCard from "@/components/DebateCard";
 import TickerSearch from "@/components/TickerSearch";
 import StockMetaBar from "@/components/StockMetaBar";
+import { isEligibleForHomepage } from "@/lib/homePageEligibility";
 import type { Debate } from "@/lib/types";
 import type { StockMetadata } from "@/lib/types";
 
-function useStockDebates() {
+const LIMITS = {
+  mostRecent: 6,
+  highConviction: 3,
+  lowConviction: 3,
+  mostActive: 3,
+} as const;
+
+/** Eligible homepage pool: stocks only, valid/published (see homePageEligibility). */
+function useEligibleHomeDebates() {
   const { getMergedDebates } = useDebates();
   return useMemo(() => {
     const all = getMergedDebates();
-    return all.filter((d) => d.categoryType === "stocks");
+    return all.filter(
+      (d) => d.categoryType === "stocks" && isEligibleForHomepage(d)
+    );
   }, [getMergedDebates]);
 }
 
-function useTrending(stockDebates: Debate[]) {
-  return useMemo(() => {
-    return [...stockDebates]
-      .sort((a, b) => b.totalVotes - a.totalVotes)
-      .slice(0, 6);
-  }, [stockDebates]);
-}
-
-function useTopBull(stockDebates: Debate[]) {
-  return useMemo(() => {
-    return [...stockDebates]
-      .filter((d) => d.totalVotes > 0)
-      .sort((a, b) => (b.proVotes / b.totalVotes) - (a.proVotes / a.totalVotes))
-      .slice(0, 3);
-  }, [stockDebates]);
-}
-
-function useTopBear(stockDebates: Debate[]) {
-  return useMemo(() => {
-    return [...stockDebates]
-      .filter((d) => d.totalVotes > 0)
-      .sort((a, b) => (b.conVotes / b.totalVotes) - (a.conVotes / a.totalVotes))
-      .slice(0, 3);
-  }, [stockDebates]);
-}
-
-function useMostActive(
-  stockDebates: Debate[],
-  getMergedArguments: (debateId: string) => { length: number }
+/** Section lists derived from the same eligible pool. Most Active = most posts (argument count). */
+function useHomeSections(
+  pool: Debate[],
+  getMergedArguments: (debateId: string) => Array<{ side: string }>
 ) {
   return useMemo(() => {
-    return [...stockDebates]
+    const mostRecent = [...pool]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, LIMITS.mostRecent);
+
+    const withVotes = pool.filter((d) => (d.totalVotes ?? 0) > 0);
+    const highConviction = [...withVotes]
+      .sort(
+        (a, b) =>
+          (b.proVotes / (b.totalVotes ?? 1)) - (a.proVotes / (a.totalVotes ?? 1))
+      )
+      .slice(0, LIMITS.highConviction);
+
+    const lowConviction = [...withVotes]
+      .sort(
+        (a, b) =>
+          (b.conVotes / (b.totalVotes ?? 1)) - (a.conVotes / (a.totalVotes ?? 1))
+      )
+      .slice(0, LIMITS.lowConviction);
+
+    const mostActive = [...pool]
       .map((d) => ({ debate: d, count: getMergedArguments(d.id).length }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 3)
+      .slice(0, LIMITS.mostActive)
       .map((x) => x.debate);
-  }, [stockDebates, getMergedArguments]);
+
+    return {
+      mostRecent,
+      highConviction,
+      lowConviction,
+      mostActive,
+    };
+  }, [pool, getMergedArguments]);
 }
 
-function StockDebateCard({ debate }: { debate: Debate }) {
-  const meta = debate.categoryType === "stocks" && debate.metadata
-    ? <StockMetaBar meta={debate.metadata as unknown as StockMetadata} className="mb-2" />
-    : null;
+function StockDebateCard({
+  debate,
+  argumentCount,
+  proCountFromArgs,
+  conCountFromArgs,
+}: {
+  debate: Debate;
+  argumentCount?: number;
+  proCountFromArgs?: number;
+  conCountFromArgs?: number;
+}) {
+  const meta =
+    debate.categoryType === "stocks" && debate.metadata ? (
+      <StockMetaBar meta={debate.metadata as unknown as StockMetadata} className="mb-2" />
+    ) : null;
   return (
     <DebateCard
       debate={debate}
       proLabel="Bull"
       conLabel="Bear"
       entityMeta={meta}
+      argumentCount={argumentCount}
+      proCountFromArgs={proCountFromArgs}
+      conCountFromArgs={conCountFromArgs}
     />
   );
 }
 
+function Section({
+  title,
+  debates,
+  getMergedArguments,
+  viewAllHref,
+}: {
+  title: string;
+  debates: Debate[];
+  getMergedArguments: (id: string) => Array<{ side: string }>;
+  viewAllHref?: string;
+}) {
+  if (debates.length === 0) return null;
+  return (
+    <section className="mb-12">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white">
+          {title}
+        </h2>
+        {viewAllHref && (
+          <Link
+            href={viewAllHref}
+            className="text-sm font-bold text-[#135bec] hover:underline"
+          >
+            View all →
+          </Link>
+        )}
+      </div>
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        {debates.map((d) => {
+          const args = getMergedArguments(d.id);
+          const proCountFromArgs = args.filter((a) => a.side === "PRO").length;
+          const conCountFromArgs = args.filter((a) => a.side === "CON").length;
+          return (
+            <StockDebateCard
+              key={d.id}
+              debate={d}
+              argumentCount={args.length}
+              proCountFromArgs={proCountFromArgs}
+              conCountFromArgs={conCountFromArgs}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
-  const stockDebates = useStockDebates();
-  const { getMergedArguments, fetchHomeDebates, debatesLoading, debatesError } = useDebates();
+  const pool = useEligibleHomeDebates();
+  const {
+    getMergedArguments,
+    fetchHomeDebates,
+    loadArgumentsForDebate,
+    debatesLoading,
+    debatesError,
+  } = useDebates();
+  const { mostRecent, highConviction, lowConviction, mostActive } =
+    useHomeSections(pool, getMergedArguments);
 
   useEffect(() => {
     fetchHomeDebates(50);
   }, [fetchHomeDebates]);
 
-  const trending = useTrending(stockDebates);
-  const topBull = useTopBull(stockDebates);
-  const topBear = useTopBear(stockDebates);
-  const mostActive = useMostActive(stockDebates, getMergedArguments);
+  // Load arguments for all pool debates so cards show same bull/bear % as detail page
+  useEffect(() => {
+    pool.forEach((d) => loadArgumentsForDebate(d.id));
+  }, [pool, loadArgumentsForDebate]);
 
   if (debatesLoading) {
     return (
       <main className="py-10">
-        <div className="text-[#4c669a] dark:text-[#94a3b8] text-center">Loading debates…</div>
+        <div className="text-[#4c669a] dark:text-[#94a3b8] text-center">
+          Loading debates…
+        </div>
       </main>
     );
   }
@@ -101,7 +184,9 @@ export default function HomePage() {
           {debatesError}
         </div>
         <p className="text-center mt-4">
-          <Link href="/" className="text-[#135bec] font-bold hover:underline">Retry</Link>
+          <Link href="/" className="text-[#135bec] font-bold hover:underline">
+            Retry
+          </Link>
         </p>
       </main>
     );
@@ -109,7 +194,6 @@ export default function HomePage() {
 
   return (
     <>
-      {/* Hero */}
       <section className="mb-12 md:mb-16">
         <div className="text-center max-w-3xl mx-auto mb-8">
           <h1 className="text-4xl md:text-5xl font-black text-[#0d121b] dark:text-white tracking-tight mb-4">
@@ -127,61 +211,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trending stock debates */}
-      <section className="mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white">
-            Trending Stock Debates
-          </h2>
-          <Link
-            href="/category/stocks"
-            className="text-sm font-bold text-[#135bec] hover:underline"
-          >
-            View all →
-          </Link>
-        </div>
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          {trending.map((d) => (
-            <StockDebateCard key={d.id} debate={d} />
-          ))}
-        </div>
-      </section>
-
-      {/* Top bull / Top bear */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
-        <section>
-          <h2 className="text-xl font-bold text-[#0d121b] dark:text-white mb-4">
-            Top Bull Cases
-          </h2>
-          <div className="space-y-4">
-            {topBull.map((d) => (
-              <StockDebateCard key={d.id} debate={d} />
-            ))}
-          </div>
-        </section>
-        <section>
-          <h2 className="text-xl font-bold text-[#0d121b] dark:text-white mb-4">
-            Top Bear Cases
-          </h2>
-          <div className="space-y-4">
-            {topBear.map((d) => (
-              <StockDebateCard key={d.id} debate={d} />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Most active debates */}
-      <section className="mb-10">
-        <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white mb-6">
-          Most Active Debates
-        </h2>
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-          {mostActive.map((d) => (
-            <StockDebateCard key={d.id} debate={d} />
-          ))}
-        </div>
-      </section>
+      <Section
+        title="Most Recent"
+        debates={mostRecent}
+        getMergedArguments={getMergedArguments}
+        viewAllHref="/category/stocks"
+      />
+      <Section
+        title="High Conviction"
+        debates={highConviction}
+        getMergedArguments={getMergedArguments}
+      />
+      <Section
+        title="Low Conviction"
+        debates={lowConviction}
+        getMergedArguments={getMergedArguments}
+      />
+      <Section
+        title="Most Active"
+        debates={mostActive}
+        getMergedArguments={getMergedArguments}
+        viewAllHref="/category/stocks"
+      />
     </>
   );
 }

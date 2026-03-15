@@ -20,6 +20,7 @@ export default function PostTakePage() {
   const [side, setSide] = useState<ArgumentSide | "">("");
   const [argument, setArgument] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
+  const [postAnonymously, setPostAnonymously] = useState(false);
   const [debate, setDebate] = useState<Debate | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export default function PostTakePage() {
     setSubmitting(true);
     setError(null);
     try {
-      await addArgument(debate.id, argument.trim(), side);
+      await addArgument(debate.id, argument.trim(), side, { postAnonymously });
       router.push(`/debate/${debate.categoryType}/${debate.symbolOrSlug}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to post argument.";
@@ -215,6 +216,20 @@ export default function PostTakePage() {
             </div>
 
             <div className="flex flex-col gap-4">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={postAnonymously}
+                  onChange={(e) => setPostAnonymously(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#cfd7e7] dark:border-slate-600 text-[#135bec] focus:ring-[#135bec]"
+                />
+                <span className="text-sm font-medium text-[#0d121b] dark:text-white group-hover:text-[#135bec] transition-colors">
+                  Post anonymously
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-col gap-4">
               <label className="text-sm font-bold text-[#4c669a] uppercase tracking-wider">
                 Add Sources (Optional)
               </label>
@@ -241,7 +256,10 @@ export default function PostTakePage() {
 
             <div className="pt-6 border-t border-[#e7ebf3] dark:border-[#2d3748] flex flex-col md:flex-row items-center justify-between gap-6">
               <p className="text-sm text-[#4c669a]">
-                Posting as <span className="font-bold text-[#0d121b] dark:text-white">Guest</span>
+                Posting as{" "}
+                <span className="font-bold text-[#0d121b] dark:text-white">
+                  {postAnonymously ? "Anonymous" : "your username"}
+                </span>
               </p>
               <button
                 className={`w-full md:w-auto min-w-[240px] h-14 text-white rounded-full text-lg font-black tracking-tight shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 ${

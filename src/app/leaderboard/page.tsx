@@ -153,19 +153,8 @@ export default function LeaderboardPage() {
         {/* Rank 2 */}
         {topThree[1] && (
           <div className="flex flex-col items-center group cursor-pointer">
-            <div
-              className="size-24 rounded-full border-4 border-slate-200 mb-4 bg-cover bg-center overflow-hidden transition-transform group-hover:scale-105"
-              style={
-                topThree[1].avatar && topThree[1].avatar.startsWith("http")
-                  ? { backgroundImage: `url(${topThree[1].avatar})` }
-                  : undefined
-              }
-            >
-              {topThree[1].avatar && !topThree[1].avatar.startsWith("http") && (
-                <div className="w-full h-full flex items-center justify-center text-4xl">
-                  {topThree[1].avatar}
-                </div>
-              )}
+            <div className="size-24 rounded-full border-4 border-slate-200 mb-4 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-3xl font-bold text-slate-500 dark:text-slate-400 transition-transform group-hover:scale-105">
+              {(topThree[1].username || "?")[0].toUpperCase()}
             </div>
             <div className="bg-white dark:bg-[#1a2133] p-6 rounded-xl w-48 text-center shadow-lg border border-slate-100 dark:border-slate-800">
               <span className="text-slate-400 font-bold text-sm mb-1 block uppercase tracking-widest">
@@ -191,19 +180,8 @@ export default function LeaderboardPage() {
                   workspace_premium
                 </span>
               </div>
-              <div
-                className="size-32 rounded-full border-4 border-[#135bec] mb-4 bg-cover bg-center overflow-hidden transition-transform group-hover:scale-105 shadow-[0_10px_25px_-5px_rgba(19,91,236,0.1),0_8px_10px_-6px_rgba(19,91,236,0.1)]"
-                style={
-                  topThree[0].avatar && topThree[0].avatar.startsWith("http")
-                    ? { backgroundImage: `url(${topThree[0].avatar})` }
-                    : undefined
-                }
-              >
-                {topThree[0].avatar && !topThree[0].avatar.startsWith("http") && (
-                  <div className="w-full h-full flex items-center justify-center text-5xl">
-                    {topThree[0].avatar}
-                  </div>
-                )}
+              <div className="size-32 rounded-full border-4 border-[#135bec] mb-4 bg-[#135bec]/10 flex items-center justify-center text-5xl font-bold text-[#135bec] transition-transform group-hover:scale-105 shadow-[0_10px_25px_-5px_rgba(19,91,236,0.1),0_8px_10px_-6px_rgba(19,91,236,0.1)]">
+                {(topThree[0].username || "?")[0].toUpperCase()}
               </div>
             </div>
             <div className="bg-[#135bec] p-8 rounded-2xl w-56 text-center shadow-2xl transform -translate-y-4">
@@ -226,19 +204,8 @@ export default function LeaderboardPage() {
         {/* Rank 3 */}
         {topThree[2] && (
           <div className="flex flex-col items-center group cursor-pointer">
-            <div
-              className="size-24 rounded-full border-4 border-[#cd7f32]/30 mb-4 bg-cover bg-center overflow-hidden transition-transform group-hover:scale-105"
-              style={
-                topThree[2].avatar && topThree[2].avatar.startsWith("http")
-                  ? { backgroundImage: `url(${topThree[2].avatar})` }
-                  : undefined
-              }
-            >
-              {topThree[2].avatar && !topThree[2].avatar.startsWith("http") && (
-                <div className="w-full h-full flex items-center justify-center text-4xl">
-                  {topThree[2].avatar}
-                </div>
-              )}
+            <div className="size-24 rounded-full border-4 border-[#cd7f32]/30 mb-4 bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center text-3xl font-bold text-[#cd7f32] dark:text-amber-400 transition-transform group-hover:scale-105">
+              {(topThree[2].username || "?")[0].toUpperCase()}
             </div>
             <div className="bg-white dark:bg-[#1a2133] p-6 rounded-xl w-48 text-center shadow-lg border border-slate-100 dark:border-slate-800">
               <span className="text-[#cd7f32] font-bold text-sm mb-1 block uppercase tracking-widest">
@@ -330,23 +297,7 @@ export default function LeaderboardPage() {
                       #{rank}
                     </td>
                     <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="size-8 rounded-full bg-cover bg-center"
-                          style={
-                            user.avatar && user.avatar.startsWith("http")
-                              ? { backgroundImage: `url(${user.avatar})` }
-                              : undefined
-                          }
-                        >
-                          {user.avatar && !user.avatar.startsWith("http") && (
-                            <div className="w-full h-full flex items-center justify-center text-lg">
-                              {user.avatar}
-                            </div>
-                          )}
-                        </div>
-                        <span className="font-bold text-sm">{user.username}</span>
-                      </div>
+                      <span className="font-bold text-sm">{user.username}</span>
                     </td>
                     <td className="px-6 py-5 text-sm">
                       <span className="font-black text-[#059669]">

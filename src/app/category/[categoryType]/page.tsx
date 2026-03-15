@@ -1,16 +1,16 @@
 "use client";
 
 /**
- * Category page: list debates for a category.
- * Fetches debates where category_type = $categoryType order by created_at desc.
+ * Category page: list debates for a category. Same inclusion as homepage (eligible only).
  */
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { getCategoryByType } from "@/lib/categories";
 import { useDebates } from "@/contexts/DebatesContext";
 import DebateCard from "@/components/DebateCard";
 import StockMetaBar from "@/components/StockMetaBar";
+import { isEligibleForHomepage } from "@/lib/homePageEligibility";
 import type { Debate } from "@/lib/types";
 import type { StockMetadata } from "@/lib/types";
 
@@ -20,6 +20,8 @@ export default function CategoryPage() {
   const {
     getCategoryDebates,
     fetchCategoryDebates,
+    getMergedArguments,
+    loadArgumentsForDebate,
     categoryLoading,
     categoryError,
   } = useDebates();
@@ -29,7 +31,16 @@ export default function CategoryPage() {
   }, [categoryType, fetchCategoryDebates]);
 
   const config = getCategoryByType(categoryType.toLowerCase());
-  const debates = getCategoryDebates(categoryType);
+  const rawDebates = getCategoryDebates(categoryType);
+  const debates = useMemo(
+    () => rawDebates.filter((d) => isEligibleForHomepage(d)),
+    [rawDebates]
+  );
+
+  // Load arguments for each debate so cards show same bull/bear % as home and detail page
+  useEffect(() => {
+    rawDebates.forEach((d) => loadArgumentsForDebate(d.id));
+  }, [categoryType, rawDebates, loadArgumentsForDebate]);
 
   if (categoryLoading) {
     return (
@@ -119,15 +130,23 @@ export default function CategoryPage() {
       </div>
 
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 items-stretch">
-        {debates.map((debate) => (
-          <DebateCard
-            key={debate.id}
-            debate={debate}
-            proLabel={proLabel}
-            conLabel={conLabel}
-            entityMeta={renderEntityMeta(debate)}
-          />
-        ))}
+        {debates.map((debate) => {
+          const args = getMergedArguments(debate.id);
+          const proCountFromArgs = args.filter((a) => a.side === "PRO").length;
+          const conCountFromArgs = args.filter((a) => a.side === "CON").length;
+          return (
+            <DebateCard
+              key={debate.id}
+              debate={debate}
+              proLabel={proLabel}
+              conLabel={conLabel}
+              entityMeta={renderEntityMeta(debate)}
+              argumentCount={args.length}
+              proCountFromArgs={proCountFromArgs}
+              conCountFromArgs={conCountFromArgs}
+            />
+          );
+        })}
       </div>
     </main>
   );

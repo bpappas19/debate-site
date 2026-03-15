@@ -32,6 +32,10 @@ export interface Argument {
   side: ArgumentSide;
   content: string;
   author: User;
+  /** When true, author_username is a generated anonymous name; real author_id still stored for ownership. */
+  isAnonymous?: boolean;
+  /** Parent argument id when this is a reply; null for top-level. */
+  parentId?: string | null;
   upvotes: number;
   downvotes: number;
   createdAt: Date;
@@ -66,6 +70,8 @@ export interface Debate {
   tags: string[];
   /** Category-specific metadata. For stocks: StockMetadata. */
   metadata?: Record<string, unknown> | StockMetadata;
+  /** Creator user id; used to show Edit button and enforce update RLS. */
+  authorId?: string | null;
 }
 
 /** Category config for nav and feature flags (active = has content). */
@@ -112,6 +118,10 @@ export interface ArgumentRow {
   upvotes: number;
   downvotes: number;
   created_at: string;
+  /** Snapshot display name at post time; used when is_anonymous or for legacy display. */
+  author_username?: string | null;
+  is_anonymous?: boolean;
+  parent_id?: string | null;
   profiles?: { id: string; username: string; avatar_url: string | null } | null;
 }
 
@@ -126,8 +136,20 @@ export interface CreateDebatePayload {
   entityName: string;
   symbolOrSlug: string;
   tags: string[];
+  /** Optional image URL for the debate card. */
+  image_url?: string | null;
   /** For stocks: { ticker, sector? }. Other categories can add their own shape. */
   metadata?: Record<string, unknown> | StockMetadata;
   firstArgument?: { content: string; side: ArgumentSide };
+}
+
+/** Payload for updating a debate. Only included fields are updated. Author-only (enforced by RLS). */
+export interface UpdateDebatePayload {
+  debateQuestion?: string;
+  description?: string;
+  entityName?: string;
+  image_url?: string | null;
+  tags?: string[];
+  metadata?: Record<string, unknown> | StockMetadata;
 }
 

@@ -13,13 +13,37 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
+  --color-primary: #135bec;
   --color-background-light: var(--background-light);
   --color-background-dark: var(--background-dark);
   --color-yes-green: var(--yes-green);
   --color-no-red: var(--no-red);
   --font-display: var(--font-inter), "Inter", sans-serif;
 }
+
+/* Ensure primary accent is always visible (fallback if theme utilities don't apply) */
+.bg-primary { background-color: #135bec; }
+.text-primary { color: #135bec; }
+.border-primary { border-color: #135bec; }
+.ring-primary { --tw-ring-color: #135bec; }
+.hover\:text-primary:hover { color: #135bec; }
+.hover\:bg-primary:hover { background-color: #135bec; }
+.focus\:ring-primary:focus { --tw-ring-color: #135bec; }
+.focus\:ring-2.focus\:ring-primary:focus { --tw-ring-color: #135bec; }
+.focus-visible\:ring-primary:focus-visible { --tw-ring-color: #135bec; }
+.focus-visible\:ring-2.focus-visible\:ring-primary:focus-visible { --tw-ring-color: #135bec; }
+.focus\:border-primary:focus { border-color: #135bec; }
+.bg-primary\/10 { background-color: rgb(19 91 236 / 0.1); }
+.bg-primary\/5 { background-color: rgb(19 91 236 / 0.05); }
+.bg-primary\/20 { background-color: rgb(19 91 236 / 0.2); }
+.bg-primary\/90 { background-color: rgb(19 91 236 / 0.9); }
+.hover\:bg-primary\/90:hover { background-color: rgb(19 91 236 / 0.9); }
+.hover\:bg-primary\/5:hover { background-color: rgb(19 91 236 / 0.05); }
+.hover\:bg-primary\/10:hover { background-color: rgb(19 91 236 / 0.1); }
+.border-primary\/10 { border-color: rgb(19 91 236 / 0.1); }
+.shadow-primary\/20 { --tw-shadow-color: rgb(19 91 236 / 0.2); }
+.from-primary { --tw-gradient-from: #135bec; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgb(19 91 236 / 0)); }
+.dark .hover\:text-primary:hover { color: #135bec; }
 
 @media (prefers-color-scheme: dark) {
   :root {

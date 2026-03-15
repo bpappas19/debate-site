@@ -13,6 +13,11 @@ interface DebateCardProps {
   conLabel?: string;
   /** Optional: slot for category-specific meta (e.g. StockMetaBar). */
   entityMeta?: React.ReactNode;
+  /** Optional: number of arguments/takes (e.g. for Most Active). */
+  argumentCount?: number;
+  /** Optional: use these for bull/bear % so cards match detail page (argument-based). */
+  proCountFromArgs?: number;
+  conCountFromArgs?: number;
 }
 
 export default function DebateCard({
@@ -20,11 +25,26 @@ export default function DebateCard({
   proLabel = "Pro",
   conLabel = "Con",
   entityMeta,
+  argumentCount,
+  proCountFromArgs,
+  conCountFromArgs,
 }: DebateCardProps) {
-  const proPercentage =
-    debate.totalVotes > 0 ? (debate.proVotes / debate.totalVotes) * 100 : 0;
-  const conPercentage =
-    debate.totalVotes > 0 ? (debate.conVotes / debate.totalVotes) * 100 : 0;
+  const fromArgs =
+    proCountFromArgs !== undefined && conCountFromArgs !== undefined;
+  const totalFromArgs = fromArgs ? proCountFromArgs + conCountFromArgs : 0;
+  const totalVotes = fromArgs && totalFromArgs > 0
+    ? totalFromArgs
+    : (debate.totalVotes ?? 0);
+  const proVotes = fromArgs && totalFromArgs > 0
+    ? proCountFromArgs
+    : (debate.proVotes ?? 0);
+  const conVotes = fromArgs && totalFromArgs > 0
+    ? conCountFromArgs
+    : (debate.conVotes ?? 0);
+  const bullPercent =
+    totalVotes > 0 ? Math.round((proVotes / totalVotes) * 100) : 0;
+  const bearPercent =
+    totalVotes > 0 ? Math.round((conVotes / totalVotes) * 100) : 0;
   const categoryConfig = getCategoryByType(debate.categoryType);
   const categoryLabel = categoryConfig?.label ?? debate.categoryType;
 
@@ -74,35 +94,30 @@ export default function DebateCard({
           <div className="space-y-2">
             <div className="flex justify-between text-xs font-bold">
               <span className="text-green-600">
-                {proPercentage.toFixed(0)}% {proLabel}
+                {bullPercent}% {proLabel}
               </span>
               <span className="text-red-600">
-                {conPercentage.toFixed(0)}% {conLabel}
+                {bearPercent}% {conLabel}
               </span>
             </div>
             <div className="h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex">
               <div
                 className="bg-green-500 transition-all"
-                style={{ width: `${proPercentage}%` }}
+                style={{ width: `${bullPercent}%` }}
               />
               <div
                 className="bg-red-500 transition-all"
-                style={{ width: `${conPercentage}%` }}
+                style={{ width: `${bearPercent}%` }}
               />
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <div className="flex -space-x-2">
-              <div className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 bg-gray-300 flex items-center justify-center text-xs">
-                👤
-              </div>
-              <div className="w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 bg-gray-400 flex items-center justify-center text-xs">
-                👤
-              </div>
-              <div className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700 text-[8px] font-bold">
-                +{Math.floor(debate.totalVotes / 100)}k
-              </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              {argumentCount !== undefined && (
+                <span>{argumentCount} take{argumentCount !== 1 ? "s" : ""}</span>
+              )}
+              <span>{totalVotes.toLocaleString()} votes</span>
             </div>
             <span className="bg-[#135bec] hover:bg-[#135bec]/90 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors">
               View Debate

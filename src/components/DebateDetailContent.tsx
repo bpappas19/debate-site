@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabaseClient";
 import { useDebates } from "@/contexts/DebatesContext";
 import { getCategoryByType } from "@/lib/categories";
 import EntityHeader from "@/components/EntityHeader";
@@ -20,25 +21,60 @@ export default function DebateDetailContent() {
 
   const {
     getMergedDebate,
+    getMergedDebates,
     getMergedArguments,
+    getVotedArgumentIds,
+    fetchHomeDebates,
     fetchDebate,
     loadArgumentsForDebate,
+    addArgument,
+    updateArgument,
+    deleteArgument,
+    voteArgument,
+    unvoteArgument,
     debateLoading,
     debateError,
+    homeLoading,
     argumentsLoading,
     argumentsError,
   } = useDebates();
-  const debate = getMergedDebate(categoryType, entitySlug);
+
+  // Resolve debate: cache first, then home list (handles single-fetch missing or slow)
+  const debate =
+    getMergedDebate(categoryType, entitySlug) ??
+    getMergedDebates().find(
+      (d) =>
+        d.categoryType.toLowerCase() === (categoryType || "").toLowerCase() &&
+        d.symbolOrSlug.toLowerCase() === (entitySlug || "").toLowerCase()
+    );
 
   useEffect(() => {
-    if (categoryType && entitySlug) fetchDebate(categoryType, entitySlug);
-  }, [categoryType, entitySlug, fetchDebate]);
+    if (!categoryType || !entitySlug) return;
+    fetchHomeDebates(50).then(() => fetchDebate(categoryType, entitySlug));
+  }, [categoryType, entitySlug, fetchHomeDebates, fetchDebate]);
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!cancelled) setCurrentUserId(user?.id ?? null);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const isAuthor =
+    !!debate &&
+    !!currentUserId &&
+    debate.authorId != null &&
+    debate.authorId === currentUserId;
 
   useEffect(() => {
     if (debate?.id) loadArgumentsForDebate(debate.id);
   }, [debate?.id, loadArgumentsForDebate]);
 
-  if (debateLoading && !debate) {
+  if ((debateLoading || homeLoading) && !debate) {
     return (
       <main className="py-6">
         <div className="text-[#4c669a] dark:text-[#94a3b8]">Loading debate…</div>
@@ -58,6 +94,11 @@ export default function DebateDetailContent() {
 
   const arguments_ = getMergedArguments(debate.id);
   const categoryLabel = getCategoryByType(debate.categoryType)?.label ?? debate.categoryType;
+
+  // Sentiment bar reflects argument counts (pro vs con takes), so it updates as people post
+  const proCount = arguments_.filter((a) => a.side === "PRO").length;
+  const conCount = arguments_.filter((a) => a.side === "CON").length;
+  const totalFromArguments = proCount + conCount;
 
   const proLabel = debate.categoryType === "stocks" ? "Bull" : "Pro";
   const conLabel = debate.categoryType === "stocks" ? "Bear" : "Con";
@@ -107,7 +148,7 @@ export default function DebateDetailContent() {
           </EntityHeader>
           <div className="flex items-center gap-4 mt-4 flex-wrap">
             <p className="text-[#4c669a] dark:text-[#94a3b8] text-sm font-medium">
-              Volume: {debate.totalVotes.toLocaleString()} votes
+              Volume: {totalFromArguments.toLocaleString()} votes
             </p>
             {debate.tags.length > 0 && (
               <div className="flex gap-2 flex-wrap">
@@ -120,6 +161,14 @@ export default function DebateDetailContent() {
         </div>
         <div className="flex flex-wrap gap-3">
           <FollowDebateButton />
+          {isAuthor && (
+            <Link
+              href={`/debate/${debate.categoryType}/${debate.symbolOrSlug}/edit`}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#cfd7e7] dark:border-slate-600 text-[#0d121b] dark:text-white text-sm font-bold hover:bg-[#f8f9fc] dark:hover:bg-slate-800 transition-colors"
+            >
+              Edit Debate
+            </Link>
+          )}
           <Link
             href={`/debate/${debate.categoryType}/${debate.symbolOrSlug}/post`}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#135bec] text-white text-sm font-bold hover:bg-[#135bec]/90 transition-colors shadow-sm"
@@ -132,9 +181,9 @@ export default function DebateDetailContent() {
 
       <div className="mb-8">
         <SentimentBar
-          proVotes={debate.proVotes}
-          conVotes={debate.conVotes}
-          totalVotes={debate.totalVotes}
+          proVotes={proCount}
+          conVotes={conCount}
+          totalVotes={totalFromArguments}
           proLabel={proLabel}
           conLabel={conLabel}
         />
@@ -156,6 +205,20 @@ export default function DebateDetailContent() {
           arguments_={arguments_}
           sideLabels={sideLabels}
           emptyMessage={emptyMessage}
+          currentUserId={currentUserId}
+          debateId={debate.id}
+          votedArgumentIds={getVotedArgumentIds(debate.id)}
+          onEditArgument={(argumentId, newContent) =>
+            updateArgument(debate.id, argumentId, newContent)
+          }
+          onDeleteArgument={(argumentId) => deleteArgument(debate.id, argumentId)}
+          onToggleVote={(argumentId) => {
+            const voted = getVotedArgumentIds(debate.id).includes(argumentId);
+            return voted ? unvoteArgument(debate.id, argumentId) : voteArgument(debate.id, argumentId);
+          }}
+          onReply={(parent, content) =>
+            addArgument(debate.id, content, parent.side, { parentId: parent.id })
+          }
         />
       )}
 

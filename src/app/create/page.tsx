@@ -32,7 +32,8 @@ function buildPayload(
     ticker: string;
     sector: string;
     subcategories: string;
-  }
+  },
+  imageUrl: string
 ): CreateDebatePayload {
   const entityName =
     categoryType === "stocks" ? stockFields.companyName.trim() : question.slice(0, 80);
@@ -65,6 +66,7 @@ function buildPayload(
     symbolOrSlug,
     tags,
     metadata,
+    image_url: imageUrl.trim() || undefined,
     firstArgument:
       firstArgument.trim() && firstArgumentSide
         ? { content: firstArgument.trim(), side: firstArgumentSide }
@@ -89,6 +91,7 @@ export default function CreatePage() {
   const [ticker, setTicker] = useState("");
   const [sector, setSector] = useState("");
   const [subcategories, setSubcategories] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +141,8 @@ export default function CreatePage() {
       context,
       firstArgument,
       firstArgumentSide,
-      { companyName, ticker, sector, subcategories }
+      { companyName, ticker, sector, subcategories },
+      imageUrl
     );
     doSubmit(payload);
   };
@@ -150,7 +154,8 @@ export default function CreatePage() {
       context,
       firstArgument,
       firstArgumentSide,
-      { companyName, ticker, sector, subcategories }
+      { companyName, ticker, sector, subcategories },
+      imageUrl
     );
     doSubmit(payload);
   };
@@ -286,6 +291,19 @@ export default function CreatePage() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 required
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[#0d121b] dark:text-white text-base font-semibold">
+                Image URL <span className="text-[#4c669a] dark:text-slate-400 text-sm font-normal">(Optional)</span>
+              </label>
+              <input
+                type="url"
+                className="w-full rounded-lg border border-[#cfd7e7] dark:border-slate-700 bg-transparent p-4 text-[#0d121b] dark:text-white focus:ring-2 focus:ring-[#135bec] focus:border-[#135bec] placeholder:text-[#4c669a] dark:placeholder:text-slate-600 transition-all"
+                placeholder="https://..."
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
               />
             </div>
 

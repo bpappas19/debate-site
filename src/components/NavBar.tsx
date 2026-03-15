@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useUI } from "@/contexts/UIContext";
@@ -15,6 +16,7 @@ export default function NavBar() {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     const supabase = createClient();
     if (!supabase) {
       setAuthLoading(false);
@@ -22,14 +24,19 @@ export default function NavBar() {
     }
     const getSession = async () => {
       const { data: { user: u } } = await supabase.auth.getUser();
-      setUser(u);
-      setAuthLoading(false);
+      if (!cancelled) {
+        setUser(u);
+        setAuthLoading(false);
+      }
     };
     getSession();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      if (!cancelled) setUser(session?.user ?? null);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSignOut = async () => {
@@ -41,17 +48,31 @@ export default function NavBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-4 lg:px-6 py-3">
+    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-4 lg:px-6 h-14 flex items-center overflow-visible">
       <div className="w-full flex items-center justify-between gap-8">
         {/* Menu & Brand */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 overflow-visible">
           <button
             onClick={toggleSidebar}
-            className="h-10 w-10 rounded-xl hover:bg-slate-800/60 dark:hover:bg-slate-800/60 flex items-center justify-center transition-colors"
+            className="h-10 w-10 rounded-xl hover:bg-slate-800/60 dark:hover:bg-slate-800/60 flex items-center justify-center transition-colors shrink-0"
             aria-label="Toggle sidebar"
           >
             <Menu className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           </button>
+          <Link
+            href="/"
+            className="flex items-center shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] rounded-lg -my-3 md:-my-4 lg:-my-5"
+            aria-label="DebateIt home"
+          >
+            <Image
+              src="/images/Debate_Logo.png"
+              alt="DebateIt"
+              width={560}
+              height={143}
+              className="h-24 md:h-32 lg:h-40 w-auto"
+              priority
+            />
+          </Link>
         </div>
 
         {/* Spacer to keep layout balanced (search lives in hero) */}
@@ -85,14 +106,9 @@ export default function NavBar() {
             {!authLoading && (
               user ? (
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 cursor-default p-1 pr-3 rounded-full">
-                    <div className="w-8 h-8 rounded-full bg-[#135bec]/20 flex items-center justify-center text-sm font-semibold text-[#135bec]">
-                      {(user.user_metadata?.username as string)?.slice(0, 1)?.toUpperCase() ?? user.email?.slice(0, 1)?.toUpperCase() ?? "?"}
-                    </div>
-                    <span className="text-sm font-semibold hidden lg:block text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
-                      {user.user_metadata?.username ?? user.email}
-                    </span>
-                  </div>
+                  <span className="text-sm font-semibold hidden lg:block text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                    {user.user_metadata?.username ?? user.email}
+                  </span>
                   <button
                     type="button"
                     onClick={handleSignOut}
@@ -104,12 +120,9 @@ export default function NavBar() {
               ) : (
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 cursor-pointer p-2 pr-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                  className="cursor-pointer p-2 pr-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors text-sm font-semibold text-gray-700 dark:text-gray-300"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#135bec]/20 flex items-center justify-center text-sm">
-                    👤
-                  </div>
-                  <span className="text-sm font-semibold hidden lg:block text-gray-700 dark:text-gray-300">Sign in</span>
+                  Sign in
                 </Link>
               )
             )}

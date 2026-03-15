@@ -9,6 +9,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
   ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabaseClient";
@@ -17,10 +18,16 @@ import {
   fetchDebatesForCategory,
   fetchDebateBySlug,
   fetchArgumentsForDebate,
+  fetchArgumentVoteIdsForDebate,
   createDebate as dataLayerCreateDebate,
+  updateDebate as dataLayerUpdateDebate,
   addArgument as dataLayerAddArgument,
+  updateArgument as dataLayerUpdateArgument,
+  deleteArgument as dataLayerDeleteArgument,
+  voteArgument as dataLayerVoteArgument,
+  removeArgumentVote as dataLayerRemoveArgumentVote,
 } from "@/lib/debatesDataLayer";
-import type { Debate, Argument, CreateDebatePayload } from "@/lib/types";
+import type { Debate, Argument, CreateDebatePayload, UpdateDebatePayload } from "@/lib/types";
 import type { ArgumentSide } from "@/lib/types";
 
 type DebatesContextType = {
@@ -34,9 +41,15 @@ type DebatesContextType = {
   fetchCategoryDebates: (categoryType: string) => Promise<void>;
   fetchDebate: (categoryType: string, entitySlug: string) => Promise<void>;
   loadArgumentsForDebate: (debateId: string) => Promise<void>;
+  getVotedArgumentIds: (debateId: string) => string[];
   // Writes (centralized; can move to server actions later)
   addDebate: (payload: CreateDebatePayload) => Promise<Debate>;
-  addArgument: (debateId: string, content: string, side: ArgumentSide) => Promise<void>;
+  updateDebate: (debateId: string, payload: UpdateDebatePayload) => Promise<Debate>;
+  addArgument: (debateId: string, content: string, side: ArgumentSide, options?: { postAnonymously?: boolean; parentId?: string | null }) => Promise<void>;
+  updateArgument: (debateId: string, argumentId: string, content: string) => Promise<void>;
+  deleteArgument: (debateId: string, argumentId: string) => Promise<void>;
+  voteArgument: (debateId: string, argumentId: string) => Promise<void>;
+  unvoteArgument: (debateId: string, argumentId: string) => Promise<void>;
   // Loading & error (per-query)
   homeLoading: boolean;
   homeError: string | null;
@@ -74,8 +87,10 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
   const [debateError, setDebateError] = useState<string | null>(null);
 
   const [argumentsByDebateId, setArgumentsByDebateId] = useState<Record<string, Argument[]>>({});
+  const [votedArgumentIdsByDebateId, setVotedArgumentIdsByDebateId] = useState<Record<string, string[]>>({});
   const [argumentsLoading, setArgumentsLoading] = useState(false);
   const [argumentsError, setArgumentsError] = useState<string | null>(null);
+  const deleteIdsRef = useRef<Set<string>>(new Set());
 
   const fetchHomeDebates = useCallback(
     async (limit: number = 50) => {
@@ -121,14 +136,23 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
       setDebateError(null);
       const { data, error } = await fetchDebateBySlug(
         supabase,
-        categoryType.toLowerCase(),
-        entitySlug
+        (categoryType ?? "").trim().toLowerCase(),
+        (entitySlug ?? "").trim().toLowerCase()
       );
-      if (data) setDebateBySlug((prev) => ({ ...prev, [key]: data }));
+      if (data) {
+        setDebateBySlug((prev) => ({ ...prev, [key]: data }));
+      } else if (!error && homeDebates.length > 0) {
+        const found = homeDebates.find(
+          (d) =>
+            d.categoryType.toLowerCase() === (categoryType ?? "").trim().toLowerCase() &&
+            d.symbolOrSlug.toLowerCase() === (entitySlug ?? "").trim().toLowerCase()
+        );
+        if (found) setDebateBySlug((prev) => ({ ...prev, [key]: found }));
+      }
       setDebateError(error);
       setDebateLoading(false);
     },
-    [supabase]
+    [supabase, homeDebates]
   );
 
   const loadArgumentsForDebate = useCallback(
@@ -139,9 +163,21 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
       const { data, error } = await fetchArgumentsForDebate(supabase, debateId);
       setArgumentsByDebateId((prev) => ({ ...prev, [debateId]: data }));
       setArgumentsError(error);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: voteIds } = await fetchArgumentVoteIdsForDebate(supabase, debateId, user.id);
+        setVotedArgumentIdsByDebateId((prev) => ({ ...prev, [debateId]: voteIds ?? [] }));
+      }
       setArgumentsLoading(false);
     },
     [supabase]
+  );
+
+  const getVotedArgumentIds = useCallback(
+    (debateId: string) => votedArgumentIdsByDebateId[debateId] ?? [],
+    [votedArgumentIdsByDebateId]
   );
 
   const getMergedDebates = useCallback(() => homeDebates, [homeDebates]);
@@ -193,19 +229,68 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
     [supabase]
   );
 
+  const updateDebate = useCallback(
+    async (debateId: string, payload: UpdateDebatePayload): Promise<Debate> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const { data, error } = await dataLayerUpdateDebate(supabase, debateId, payload);
+      if (error) throw new Error(error);
+      if (!data) throw new Error("Failed to update debate.");
+      const key = slugKey(data.categoryType, data.symbolOrSlug);
+      setDebateBySlug((prev) => ({ ...prev, [key]: data }));
+      setHomeDebates((prev) =>
+        prev.map((d) => (d.id === data.id ? data : d))
+      );
+      setCategoryDebates((prev) => {
+        const cat = data.categoryType.toLowerCase();
+        const list = prev[cat] ?? [];
+        const idx = list.findIndex((d) => d.id === data.id);
+        if (idx < 0) return prev;
+        const next = [...list];
+        next[idx] = data;
+        return { ...prev, [cat]: next };
+      });
+      return data;
+    },
+    [supabase]
+  );
+
   const addArgument = useCallback(
-    async (debateId: string, content: string, side: ArgumentSide): Promise<void> => {
+    async (
+      debateId: string,
+      content: string,
+      side: ArgumentSide,
+      options?: { postAnonymously?: boolean; parentId?: string | null }
+    ): Promise<void> => {
       if (!supabase) throw new Error("Supabase not configured.");
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("You must be signed in to post an argument.");
+      let authorUsername: string;
+      let isAnonymous = false;
+      if (options?.postAnonymously) {
+        const { generateAnonymousUsername } = await import("@/lib/anonymousUsername");
+        authorUsername = generateAnonymousUsername();
+        isAnonymous = true;
+      } else {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .maybeSingle();
+        authorUsername =
+          profile?.username ??
+          (user.user_metadata?.username as string | undefined) ??
+          user.email?.split("@")[0] ??
+          "User";
+      }
       const { data, error } = await dataLayerAddArgument(
         supabase,
         debateId,
         content,
         side,
-        user.id
+        user.id,
+        { authorUsername, isAnonymous, parentId: options?.parentId ?? undefined }
       );
       if (error) throw new Error(error);
       if (!data) throw new Error("Failed to post argument.");
@@ -213,6 +298,107 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
         ...prev,
         [debateId]: [...(prev[debateId] ?? []), data],
       }));
+    },
+    [supabase]
+  );
+
+  const updateArgument = useCallback(
+    async (debateId: string, argumentId: string, content: string): Promise<void> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const { data, error } = await dataLayerUpdateArgument(supabase, argumentId, content.trim());
+      if (error) throw new Error(error);
+      if (!data) throw new Error("Failed to update argument.");
+      setArgumentsByDebateId((prev) => {
+        const list = prev[debateId] ?? [];
+        const next = list.map((a) => (a.id === argumentId ? data : a));
+        return { ...prev, [debateId]: next };
+      });
+    },
+    [supabase]
+  );
+
+  const deleteArgument = useCallback(
+    async (debateId: string, argumentId: string): Promise<void> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const { error } = await dataLayerDeleteArgument(supabase, argumentId);
+      if (error) throw new Error(error);
+      setArgumentsByDebateId((prev) => {
+        const list = prev[debateId] ?? [];
+        const idsToRemove = new Set<string>([argumentId]);
+        let added = true;
+        while (added) {
+          added = false;
+          for (const a of list) {
+            if (a.parentId && idsToRemove.has(a.parentId) && !idsToRemove.has(a.id)) {
+              idsToRemove.add(a.id);
+              added = true;
+            }
+          }
+        }
+        deleteIdsRef.current = idsToRemove;
+        const next = list.filter((a) => !idsToRemove.has(a.id));
+        return { ...prev, [debateId]: next };
+      });
+      setVotedArgumentIdsByDebateId((prev) => {
+        const idsToRemove = deleteIdsRef.current;
+        return {
+          ...prev,
+          [debateId]: (prev[debateId] ?? []).filter((id) => !idsToRemove.has(id)),
+        };
+      });
+      await loadArgumentsForDebate(debateId);
+    },
+    [supabase, loadArgumentsForDebate]
+  );
+
+  const voteArgument = useCallback(
+    async (debateId: string, argumentId: string): Promise<void> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("You must be signed in to like a comment.");
+      const { error } = await dataLayerVoteArgument(supabase, argumentId, user.id);
+      if (error) throw new Error(error);
+      setVotedArgumentIdsByDebateId((prev) => ({
+        ...prev,
+        [debateId]: [...(prev[debateId] ?? []), argumentId],
+      }));
+      setArgumentsByDebateId((prev) => {
+        const list = prev[debateId] ?? [];
+        return {
+          ...prev,
+          [debateId]: list.map((a) =>
+            a.id === argumentId ? { ...a, upvotes: a.upvotes + 1 } : a
+          ),
+        };
+      });
+    },
+    [supabase]
+  );
+
+  const unvoteArgument = useCallback(
+    async (debateId: string, argumentId: string): Promise<void> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await dataLayerRemoveArgumentVote(supabase, argumentId, user.id);
+      if (error) throw new Error(error);
+      setVotedArgumentIdsByDebateId((prev) => ({
+        ...prev,
+        [debateId]: (prev[debateId] ?? []).filter((id) => id !== argumentId),
+      }));
+      setArgumentsByDebateId((prev) => {
+        const list = prev[debateId] ?? [];
+        return {
+          ...prev,
+          [debateId]: list.map((a) =>
+            a.id === argumentId ? { ...a, upvotes: Math.max(0, a.upvotes - 1) } : a
+          ),
+        };
+      });
     },
     [supabase]
   );
@@ -227,8 +413,14 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
       fetchCategoryDebates,
       fetchDebate,
       loadArgumentsForDebate,
+      getVotedArgumentIds,
       addDebate,
+      updateDebate,
       addArgument,
+      updateArgument,
+      deleteArgument,
+      voteArgument,
+      unvoteArgument,
       homeLoading,
       homeError,
       categoryLoading,
@@ -249,8 +441,14 @@ export function DebatesProvider({ children }: { children: ReactNode }) {
       fetchCategoryDebates,
       fetchDebate,
       loadArgumentsForDebate,
+      getVotedArgumentIds,
       addDebate,
+      updateDebate,
       addArgument,
+      updateArgument,
+      deleteArgument,
+      voteArgument,
+      unvoteArgument,
       homeLoading,
       homeError,
       categoryLoading,
