@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import { useDebates } from "@/contexts/DebatesContext";
@@ -17,9 +18,42 @@ export default function DebateDetailContent() {
   const categoryType = (params?.categoryType as string) ?? "";
   const entitySlug = (params?.entitySlug as string) ?? "";
 
-  const { getMergedDebate, getMergedArguments } = useDebates();
+  const {
+    getMergedDebate,
+    getMergedArguments,
+    fetchDebate,
+    loadArgumentsForDebate,
+    debateLoading,
+    debateError,
+    argumentsLoading,
+    argumentsError,
+  } = useDebates();
   const debate = getMergedDebate(categoryType, entitySlug);
 
+  useEffect(() => {
+    if (categoryType && entitySlug) fetchDebate(categoryType, entitySlug);
+  }, [categoryType, entitySlug, fetchDebate]);
+
+  useEffect(() => {
+    if (debate?.id) loadArgumentsForDebate(debate.id);
+  }, [debate?.id, loadArgumentsForDebate]);
+
+  if (debateLoading && !debate) {
+    return (
+      <main className="py-6">
+        <div className="text-[#4c669a] dark:text-[#94a3b8]">Loading debate…</div>
+      </main>
+    );
+  }
+  if (debateError) {
+    return (
+      <main className="py-6">
+        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 mb-4">
+          {debateError}
+        </div>
+      </main>
+    );
+  }
   if (!debate) notFound();
 
   const arguments_ = getMergedArguments(debate.id);
@@ -112,11 +146,18 @@ export default function DebateDetailContent() {
         </span>
       </div>
 
-      <ArgumentList
-        arguments_={arguments_}
-        sideLabels={sideLabels}
-        emptyMessage={emptyMessage}
-      />
+      {argumentsError && (
+        <p className="py-4 text-red-600 dark:text-red-400 text-sm">{argumentsError}</p>
+      )}
+      {argumentsLoading ? (
+        <p className="text-[#4c669a] dark:text-[#94a3b8] py-4">Loading arguments…</p>
+      ) : (
+        <ArgumentList
+          arguments_={arguments_}
+          sideLabels={sideLabels}
+          emptyMessage={emptyMessage}
+        />
+      )}
 
       <footer className="mt-20 py-10 border-t border-[#e7ebf3] dark:border-[#2d3748] text-center">
         <p className="text-[#4c669a] dark:text-[#94a3b8] text-sm">

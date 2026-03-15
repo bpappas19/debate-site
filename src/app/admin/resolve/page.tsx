@@ -17,7 +17,6 @@ export default function AdminResolvePage() {
 
   const handleResolve = (debateId: string, side: ArgumentSide) => {
     setResolvedIds((prev) => new Set(prev).add(debateId));
-    console.log(`Resolved debate ${debateId} as ${side}`);
     alert(`Debate resolved as ${side}! (Mock - no backend yet)`);
   };
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabaseClient";
 import { CATEGORIES } from "@/lib/categories";
 import { useDebates } from "@/contexts/DebatesContext";
 import { STOCK_SECTORS } from "@/lib/stockSectors";
@@ -76,6 +77,8 @@ function buildPayload(
 export default function CreatePage() {
   const router = useRouter();
   const { addDebate } = useDebates();
+  const [authChecking, setAuthChecking] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const [question, setQuestion] = useState("");
   const [categoryType, setCategoryType] = useState<CategoryType | "">("");
   const [context, setContext] = useState("");
@@ -87,7 +90,41 @@ export default function CreatePage() {
   const [sector, setSector] = useState("");
   const [subcategories, setSubcategories] = useState("");
 
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) {
+      setAuthChecking(false);
+      router.replace("/login?redirect=/create");
+      return;
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthChecking(false);
+      if (user) setAuthenticated(true);
+      else router.replace("/login?redirect=/create");
+    });
+  }, [router]);
+
   const isStocks = categoryType === "stocks";
+
+  const doSubmit = async (payload: CreateDebatePayload) => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const debate = await addDebate(payload);
+      router.push(`/debate/${debate.categoryType}/${debate.symbolOrSlug}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to create debate.";
+      setError(msg);
+      if (msg.toLowerCase().includes("signed in")) {
+        router.push("/login?redirect=/create");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,8 +140,7 @@ export default function CreatePage() {
       firstArgumentSide,
       { companyName, ticker, sector, subcategories }
     );
-    const debate = addDebate(payload);
-    router.push(`/debate/${debate.categoryType}/${debate.symbolOrSlug}`);
+    doSubmit(payload);
   };
 
   const handleSaveDraft = () => {
@@ -116,13 +152,22 @@ export default function CreatePage() {
       firstArgumentSide,
       { companyName, ticker, sector, subcategories }
     );
-    const debate = addDebate(payload);
-    router.push(`/debate/${debate.categoryType}/${debate.symbolOrSlug}`);
+    doSubmit(payload);
   };
 
   const sideLabels = isStocks
     ? { PRO: "Bull", CON: "Bear", HOLD: "Hold" }
     : { PRO: "Pro", CON: "Con", HOLD: "Hold" };
+
+  if (authChecking || !authenticated) {
+    return (
+      <main className="py-10">
+        <div className="mx-auto max-w-3xl text-center text-[#4c669a] dark:text-slate-400">
+          Loading…
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="py-10">
@@ -136,6 +181,11 @@ export default function CreatePage() {
           </p>
         </div>
 
+        {error && (
+          <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+            {error}
+          </div>
+        )}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-8 shadow-sm border border-[#e7ebf3] dark:border-slate-800">
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="flex flex-col gap-2">
@@ -302,14 +352,16 @@ export default function CreatePage() {
             <div className="flex items-center gap-4 pt-4">
               <button
                 type="submit"
-                className="flex-1 lg:flex-none lg:min-w-[200px] h-14 bg-[#135bec] text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-[#135bec]/20"
+                disabled={submitting}
+                className="flex-1 lg:flex-none lg:min-w-[200px] h-14 bg-[#135bec] text-white font-bold rounded-lg hover:bg-blue-700 transition-all shadow-lg shadow-[#135bec]/20 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Publish Debate
+                {submitting ? "Publishing…" : "Publish Debate"}
               </button>
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="flex-1 lg:flex-none lg:min-w-[140px] h-14 border border-[#cfd7e7] dark:border-slate-700 text-[#0d121b] dark:text-white font-semibold rounded-lg hover:bg-[#f8f9fc] dark:hover:bg-slate-800 transition-all"
+                disabled={submitting}
+                className="flex-1 lg:flex-none lg:min-w-[140px] h-14 border border-[#cfd7e7] dark:border-slate-700 text-[#0d121b] dark:text-white font-semibold rounded-lg hover:bg-[#f8f9fc] dark:hover:bg-slate-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 Save Draft
               </button>

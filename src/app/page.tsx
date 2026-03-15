@@ -2,10 +2,10 @@
 
 /**
  * Homepage: stock-focused at launch. Hero, ticker search, trending / bull / bear / most active.
- * Uses merged debates (mock + user-created) so new debates appear.
+ * Fetches a limited set of debates (ordered by created_at) for display and search.
  */
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useDebates } from "@/contexts/DebatesContext";
 import DebateCard from "@/components/DebateCard";
 import TickerSearch from "@/components/TickerSearch";
@@ -76,11 +76,36 @@ function StockDebateCard({ debate }: { debate: Debate }) {
 
 export default function HomePage() {
   const stockDebates = useStockDebates();
-  const { getMergedArguments } = useDebates();
+  const { getMergedArguments, fetchHomeDebates, debatesLoading, debatesError } = useDebates();
+
+  useEffect(() => {
+    fetchHomeDebates(50);
+  }, [fetchHomeDebates]);
+
   const trending = useTrending(stockDebates);
   const topBull = useTopBull(stockDebates);
   const topBear = useTopBear(stockDebates);
   const mostActive = useMostActive(stockDebates, getMergedArguments);
+
+  if (debatesLoading) {
+    return (
+      <main className="py-10">
+        <div className="text-[#4c669a] dark:text-[#94a3b8] text-center">Loading debates…</div>
+      </main>
+    );
+  }
+  if (debatesError) {
+    return (
+      <main className="py-10">
+        <div className="max-w-xl mx-auto p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {debatesError}
+        </div>
+        <p className="text-center mt-4">
+          <Link href="/" className="text-[#135bec] font-bold hover:underline">Retry</Link>
+        </p>
+      </main>
+    );
+  }
 
   return (
     <>

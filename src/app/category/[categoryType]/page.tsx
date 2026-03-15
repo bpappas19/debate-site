@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * Category page: list debates for a category (mock + user-created).
+ * Category page: list debates for a category.
+ * Fetches debates where category_type = $categoryType order by created_at desc.
  */
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useEffect } from "react";
 import { getCategoryByType } from "@/lib/categories";
 import { useDebates } from "@/contexts/DebatesContext";
 import DebateCard from "@/components/DebateCard";
@@ -15,13 +17,37 @@ import type { StockMetadata } from "@/lib/types";
 export default function CategoryPage() {
   const params = useParams();
   const categoryType = (params?.categoryType as string) ?? "";
-  const { getMergedDebates } = useDebates();
+  const {
+    getCategoryDebates,
+    fetchCategoryDebates,
+    categoryLoading,
+    categoryError,
+  } = useDebates();
+
+  useEffect(() => {
+    if (categoryType) fetchCategoryDebates(categoryType);
+  }, [categoryType, fetchCategoryDebates]);
 
   const config = getCategoryByType(categoryType.toLowerCase());
-  const debates = getMergedDebates().filter(
-    (d) => d.categoryType === categoryType.toLowerCase()
-  );
+  const debates = getCategoryDebates(categoryType);
 
+  if (categoryLoading) {
+    return (
+      <main className="py-10">
+        <div className="text-[#4c669a] dark:text-[#94a3b8]">Loading debates…</div>
+      </main>
+    );
+  }
+  if (categoryError) {
+    return (
+      <main className="py-10">
+        <div className="mb-8 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {categoryError}
+        </div>
+        <Link href="/" className="text-[#135bec] font-bold hover:underline">← Back to Home</Link>
+      </main>
+    );
+  }
   if (!config) {
     return (
       <main className="py-10">

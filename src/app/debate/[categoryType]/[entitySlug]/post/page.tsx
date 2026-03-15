@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabaseClient";
 import { useDebates } from "@/contexts/DebatesContext";
 import type { ArgumentSide } from "@/lib/types";
 import type { Debate } from "@/lib/types";
@@ -12,18 +13,58 @@ export default function PostTakePage() {
   const params = useParams();
   const categoryType = (params?.categoryType as string) ?? "";
   const entitySlug = (params?.entitySlug as string) ?? "";
-  const { getMergedDebate, addArgument } = useDebates();
+  const { getMergedDebate, fetchDebate, debateLoading, addArgument } = useDebates();
 
+  const [authChecking, setAuthChecking] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const [side, setSide] = useState<ArgumentSide | "">("");
   const [argument, setArgument] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [debate, setDebate] = useState<Debate | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) {
+      setAuthChecking(false);
+      router.replace(`/login?redirect=${encodeURIComponent(`/debate/${categoryType}/${entitySlug}/post`)}`);
+      return;
+    }
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthChecking(false);
+      if (user) setAuthenticated(true);
+      else router.replace(`/login?redirect=${encodeURIComponent(`/debate/${categoryType}/${entitySlug}/post`)}`);
+    });
+  }, [router, categoryType, entitySlug]);
+
+  useEffect(() => {
+    if (categoryType && entitySlug) fetchDebate(categoryType, entitySlug);
+  }, [categoryType, entitySlug, fetchDebate]);
 
   useEffect(() => {
     const d = getMergedDebate(categoryType, entitySlug);
     setDebate(d);
   }, [categoryType, entitySlug, getMergedDebate]);
 
+  if (authChecking || !authenticated) {
+    return (
+      <div className="fixed inset-0 top-[57px] z-40 bg-[#0d121b]/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-[#1a2133] rounded-2xl p-8 text-center">
+          <p className="text-[#4c669a] dark:text-[#94a3b8]">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+  if (debateLoading && !debate) {
+    return (
+      <div className="fixed inset-0 top-[57px] z-40 bg-[#0d121b]/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-[#1a2133] rounded-2xl p-8 text-center">
+          <p className="text-[#4c669a] dark:text-[#94a3b8]">Loading debate…</p>
+        </div>
+      </div>
+    );
+  }
   if (!debate) {
     return (
       <div className="fixed inset-0 top-[57px] z-40 bg-[#0d121b]/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -42,23 +83,26 @@ export default function PostTakePage() {
   const proLabel = debate.categoryType === "stocks" ? "Bull" : "Pro";
   const conLabel = debate.categoryType === "stocks" ? "Bear" : "Con";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!side || !argument.trim()) {
       alert("Please select a side and write your argument.");
       return;
     }
-    if (debate.id.startsWith("user-")) {
-      addArgument(debate.id, argument.trim(), side);
-    } else {
-      console.log("Posting take (mock debate):", {
-        debateId: debate.id,
-        side,
-        content: argument,
-        sourceUrl: sourceUrl || undefined,
-      });
+    setSubmitting(true);
+    setError(null);
+    try {
+      await addArgument(debate.id, argument.trim(), side);
+      router.push(`/debate/${debate.categoryType}/${debate.symbolOrSlug}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to post argument.";
+      setError(msg);
+      if (msg.toLowerCase().includes("signed in")) {
+        router.push(`/login?redirect=${encodeURIComponent(`/debate/${debate.categoryType}/${debate.symbolOrSlug}/post`)}`);
+      }
+    } finally {
+      setSubmitting(false);
     }
-    router.push(`/debate/${debate.categoryType}/${debate.symbolOrSlug}`);
   };
 
   const argumentLength = argument.length;
@@ -85,6 +129,11 @@ export default function PostTakePage() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-8 py-8">
+          {error && (
+            <div className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
             <div className="flex flex-col gap-4">
               <label className="text-sm font-bold text-[#4c669a] uppercase tracking-wider">
@@ -183,7 +232,7 @@ export default function PostTakePage() {
                 <button
                   type="button"
                   className="bg-[#e7ebf3] dark:bg-[#2d3748] text-[#0d121b] dark:text-white px-4 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => sourceUrl.trim() && (console.log("Adding source:", sourceUrl), setSourceUrl(""))}
+                  onClick={() => sourceUrl.trim() && setSourceUrl("")}
                 >
                   Add
                 </button>
@@ -203,7 +252,7 @@ export default function PostTakePage() {
                       : "bg-[#135bec] hover:bg-[#135bec]/90 shadow-[#135bec]/20"
                 }`}
                 type="submit"
-                disabled={!side || !argument.trim()}
+                disabled={!side || !argument.trim() || submitting}
               >
                 Post My Take
                 <span className="material-symbols-outlined">send</span>

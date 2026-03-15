@@ -76,6 +76,46 @@ export interface CategoryConfig {
 }
 
 /**
+ * DB row shape for debates (snake_case). Used when mapping from Supabase.
+ * App code uses Debate (camelCase).
+ */
+export interface DebateRow {
+  id: string;
+  category_type: string;
+  symbol_or_slug: string;
+  entity_id: string;
+  entity_name: string;
+  debate_question: string;
+  description: string | null;
+  metadata: Record<string, unknown>;
+  tags: string[];
+  pro_votes: number;
+  con_votes: number;
+  total_votes: number;
+  image: string | null;
+  resolved: boolean;
+  resolved_side: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  author_id: string | null;
+}
+
+/**
+ * DB row shape for arguments with joined profile (snake_case).
+ */
+export interface ArgumentRow {
+  id: string;
+  debate_id: string;
+  author_id: string | null;
+  side: string;
+  content: string;
+  upvotes: number;
+  downvotes: number;
+  created_at: string;
+  profiles?: { id: string; username: string; avatar_url: string | null } | null;
+}
+
+/**
  * Payload for creating a debate. Backend-ready: POST body can use this shape.
  * Backend maps to Debate by adding: id, entityId (= symbolOrSlug), proVotes/conVotes/totalVotes = 0, createdAt.
  */

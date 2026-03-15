@@ -1,7 +1,8 @@
 /**
- * Mock data for the debate platform.
+ * Mock data for the debate platform (optional seed/reference).
+ * Live data comes from Supabase. This file is still used by:
+ * - admin/resolve, leaderboard, and legacy /q routes for mock/fallback data.
  * Structured generically (Debate + Argument by categoryType) with stocks as the first vertical.
- * Future categories can add debates/arguments without refactoring this file.
  */
 import type { Debate, Argument, User, StockMetadata } from "./types";
 
@@ -453,25 +454,8 @@ export const mockArgumentsByDebateId: Record<string, Argument[]> = {
   ],
 };
 
-/** Get debate by category and entity slug (e.g. stocks, nvda). */
-export function getDebate(categoryType: string, entitySlug: string): Debate | undefined {
-  return mockDebates.find(
-    (d) => d.categoryType === categoryType && d.symbolOrSlug.toLowerCase() === entitySlug.toLowerCase()
-  );
-}
-
-/** Get all debates for a category. */
-export function getDebatesByCategory(categoryType: string): Debate[] {
-  return mockDebates.filter((d) => d.categoryType === categoryType);
-}
-
-/** Stock debates only (for homepage and stock-focused UI). */
+/** Stock debates only (used by legacy /q routes and leaderboard). */
 export const mockStockDebates = mockDebates.filter((d) => d.categoryType === "stocks");
-
-/** Arguments for a debate. */
-export function getArguments(debateId: string): Argument[] {
-  return mockArgumentsByDebateId[debateId] ?? [];
-}
 
 // --- Leaderboard (can later be keyed by categoryType + entitySlug) ---
 export interface LeaderboardUser {

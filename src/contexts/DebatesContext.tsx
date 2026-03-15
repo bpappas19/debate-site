@@ -1,5 +1,8 @@
 "use client";
 
+// TODO: wire votes table and debate_follows when UI is ready; RLS and tables exist in migration.
+// Voting: derive counts from votes table or use atomic SQL increments — see debatesDataLayer.ts.
+
 import {
   createContext,
   useContext,
@@ -8,144 +11,255 @@ import {
   useMemo,
   ReactNode,
 } from "react";
+import { createClient } from "@/lib/supabaseClient";
 import {
-  mockDebates,
-  mockArgumentsByDebateId,
-  mockUsers,
-} from "@/lib/mock";
+  fetchDebatesForHome,
+  fetchDebatesForCategory,
+  fetchDebateBySlug,
+  fetchArgumentsForDebate,
+  createDebate as dataLayerCreateDebate,
+  addArgument as dataLayerAddArgument,
+} from "@/lib/debatesDataLayer";
 import type { Debate, Argument, CreateDebatePayload } from "@/lib/types";
-
-type UserDebatesState = {
-  debates: Debate[];
-  argumentsByDebateId: Record<string, Argument[]>;
-};
-
-function payloadToDebate(payload: CreateDebatePayload): Debate {
-  const id = "user-" + Date.now();
-  return {
-    id,
-    categoryType: payload.categoryType,
-    entityId: payload.symbolOrSlug,
-    entityName: payload.entityName,
-    symbolOrSlug: payload.symbolOrSlug,
-    debateQuestion: payload.debateQuestion,
-    description: payload.description,
-    proVotes: 0,
-    conVotes: 0,
-    totalVotes: 0,
-    createdAt: new Date(),
-    tags: payload.tags ?? [],
-    metadata: payload.metadata,
-  };
-}
-
-function createArgumentFromPayload(
-  debateId: string,
-  content: string,
-  side: "PRO" | "CON" | "HOLD"
-): Argument {
-  return {
-    id: "user-arg-" + Date.now(),
-    debateId,
-    side,
-    content,
-    author: mockUsers[0],
-    upvotes: 0,
-    downvotes: 0,
-    createdAt: new Date(),
-  };
-}
+import type { ArgumentSide } from "@/lib/types";
 
 type DebatesContextType = {
+  // Getters (read from cache)
   getMergedDebates: () => Debate[];
+  getCategoryDebates: (categoryType: string) => Debate[];
   getMergedDebate: (categoryType: string, entitySlug: string) => Debate | undefined;
   getMergedArguments: (debateId: string) => Argument[];
-  addDebate: (payload: CreateDebatePayload) => Debate;
-  addArgument: (debateId: string, content: string, side: "PRO" | "CON" | "HOLD") => void;
+  // Fetches (run query, update cache)
+  fetchHomeDebates: (limit?: number) => Promise<void>;
+  fetchCategoryDebates: (categoryType: string) => Promise<void>;
+  fetchDebate: (categoryType: string, entitySlug: string) => Promise<void>;
+  loadArgumentsForDebate: (debateId: string) => Promise<void>;
+  // Writes (centralized; can move to server actions later)
+  addDebate: (payload: CreateDebatePayload) => Promise<Debate>;
+  addArgument: (debateId: string, content: string, side: ArgumentSide) => Promise<void>;
+  // Loading & error (per-query)
+  homeLoading: boolean;
+  homeError: string | null;
+  categoryLoading: boolean;
+  categoryError: string | null;
+  debateLoading: boolean;
+  debateError: string | null;
+  argumentsLoading: boolean;
+  argumentsError: string | null;
+  // Backward-compat aliases for pages that still use these names
+  debatesLoading: boolean;
+  debatesError: string | null;
 };
 
 const DebatesContext = createContext<DebatesContextType | undefined>(undefined);
 
-export function DebatesProvider({ children }: { children: ReactNode }) {
-  const [userState, setUserState] = useState<UserDebatesState>({
-    debates: [],
-    argumentsByDebateId: {},
-  });
+function slugKey(categoryType: string, entitySlug: string): string {
+  return `${categoryType.toLowerCase()}/${entitySlug.toLowerCase()}`;
+}
 
-  const addDebate = useCallback((payload: CreateDebatePayload): Debate => {
-    const debate = payloadToDebate(payload);
-    const newArgs: Argument[] = [];
-    if (payload.firstArgument?.content && payload.firstArgument?.side) {
-      const arg = createArgumentFromPayload(
-        debate.id,
-        payload.firstArgument.content,
-        payload.firstArgument.side
+export function DebatesProvider({ children }: { children: ReactNode }) {
+  const supabase = useMemo(() => createClient(), []);
+
+  // Caches
+  const [homeDebates, setHomeDebates] = useState<Debate[]>([]);
+  const [homeLoading, setHomeLoading] = useState(false);
+  const [homeError, setHomeError] = useState<string | null>(null);
+
+  const [categoryDebates, setCategoryDebates] = useState<Record<string, Debate[]>>({});
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+
+  const [debateBySlug, setDebateBySlug] = useState<Record<string, Debate>>({});
+  const [debateLoading, setDebateLoading] = useState(false);
+  const [debateError, setDebateError] = useState<string | null>(null);
+
+  const [argumentsByDebateId, setArgumentsByDebateId] = useState<Record<string, Argument[]>>({});
+  const [argumentsLoading, setArgumentsLoading] = useState(false);
+  const [argumentsError, setArgumentsError] = useState<string | null>(null);
+
+  const fetchHomeDebates = useCallback(
+    async (limit: number = 50) => {
+      if (!supabase) {
+        setHomeError("Supabase not configured.");
+        return;
+      }
+      setHomeLoading(true);
+      setHomeError(null);
+      const { data, error } = await fetchDebatesForHome(supabase, limit);
+      setHomeDebates(data);
+      setHomeError(error);
+      setHomeLoading(false);
+    },
+    [supabase]
+  );
+
+  const fetchCategoryDebates = useCallback(
+    async (categoryType: string) => {
+      if (!supabase) {
+        setCategoryError("Supabase not configured.");
+        return;
+      }
+      const cat = categoryType.toLowerCase();
+      setCategoryLoading(true);
+      setCategoryError(null);
+      const { data, error } = await fetchDebatesForCategory(supabase, cat);
+      setCategoryDebates((prev) => ({ ...prev, [cat]: data }));
+      setCategoryError(error);
+      setCategoryLoading(false);
+    },
+    [supabase]
+  );
+
+  const fetchDebate = useCallback(
+    async (categoryType: string, entitySlug: string) => {
+      if (!supabase) {
+        setDebateError("Supabase not configured.");
+        return;
+      }
+      const key = slugKey(categoryType, entitySlug);
+      setDebateLoading(true);
+      setDebateError(null);
+      const { data, error } = await fetchDebateBySlug(
+        supabase,
+        categoryType.toLowerCase(),
+        entitySlug
       );
-      newArgs.push(arg);
-    }
-    setUserState((prev) => ({
-      debates: [...prev.debates, debate],
-      argumentsByDebateId: {
-        ...prev.argumentsByDebateId,
-        [debate.id]: [...(prev.argumentsByDebateId[debate.id] ?? []), ...newArgs],
-      },
-    }));
-    return debate;
-  }, []);
+      if (data) setDebateBySlug((prev) => ({ ...prev, [key]: data }));
+      setDebateError(error);
+      setDebateLoading(false);
+    },
+    [supabase]
+  );
+
+  const loadArgumentsForDebate = useCallback(
+    async (debateId: string) => {
+      if (!supabase) return;
+      setArgumentsLoading(true);
+      setArgumentsError(null);
+      const { data, error } = await fetchArgumentsForDebate(supabase, debateId);
+      setArgumentsByDebateId((prev) => ({ ...prev, [debateId]: data }));
+      setArgumentsError(error);
+      setArgumentsLoading(false);
+    },
+    [supabase]
+  );
+
+  const getMergedDebates = useCallback(() => homeDebates, [homeDebates]);
+  const getCategoryDebates = useCallback(
+    (categoryType: string) => categoryDebates[categoryType.toLowerCase()] ?? [],
+    [categoryDebates]
+  );
+  const getMergedDebate = useCallback(
+    (categoryType: string, entitySlug: string) =>
+      debateBySlug[slugKey(categoryType, entitySlug)],
+    [debateBySlug]
+  );
+  const getMergedArguments = useCallback(
+    (debateId: string) => argumentsByDebateId[debateId] ?? [],
+    [argumentsByDebateId]
+  );
+
+  const addDebate = useCallback(
+    async (payload: CreateDebatePayload): Promise<Debate> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("You must be signed in to create a debate.");
+      const { data, error } = await dataLayerCreateDebate(supabase, payload, user.id);
+      if (error) throw new Error(error);
+      if (!data) throw new Error("Failed to create debate.");
+      setHomeDebates((prev) => [data, ...prev]);
+      setDebateBySlug((prev) => ({
+        ...prev,
+        [slugKey(payload.categoryType, payload.symbolOrSlug)]: data,
+      }));
+      if (payload.firstArgument?.content && payload.firstArgument?.side) {
+        const { data: arg, error: argErr } = await dataLayerAddArgument(
+          supabase,
+          data.id,
+          payload.firstArgument.content,
+          payload.firstArgument.side,
+          user.id
+        );
+        if (!argErr && arg)
+          setArgumentsByDebateId((prev) => ({
+            ...prev,
+            [data.id]: [arg],
+          }));
+      }
+      return data;
+    },
+    [supabase]
+  );
 
   const addArgument = useCallback(
-    (debateId: string, content: string, side: "PRO" | "CON" | "HOLD") => {
-      const arg = createArgumentFromPayload(debateId, content, side);
-      setUserState((prev) => ({
+    async (debateId: string, content: string, side: ArgumentSide): Promise<void> => {
+      if (!supabase) throw new Error("Supabase not configured.");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("You must be signed in to post an argument.");
+      const { data, error } = await dataLayerAddArgument(
+        supabase,
+        debateId,
+        content,
+        side,
+        user.id
+      );
+      if (error) throw new Error(error);
+      if (!data) throw new Error("Failed to post argument.");
+      setArgumentsByDebateId((prev) => ({
         ...prev,
-        argumentsByDebateId: {
-          ...prev.argumentsByDebateId,
-          [debateId]: [...(prev.argumentsByDebateId[debateId] ?? []), arg],
-        },
+        [debateId]: [...(prev[debateId] ?? []), data],
       }));
     },
-    []
-  );
-
-  const getMergedDebates = useCallback((): Debate[] => {
-    const map = new Map<string, Debate>();
-    mockDebates.forEach((d) => map.set(`${d.categoryType}/${d.symbolOrSlug}`, d));
-    userState.debates.forEach((d) => map.set(`${d.categoryType}/${d.symbolOrSlug}`, d));
-    return Array.from(map.values());
-  }, [userState.debates]);
-
-  const getMergedDebate = useCallback(
-    (categoryType: string, entitySlug: string): Debate | undefined => {
-      const slug = entitySlug.toLowerCase();
-      const fromUser = userState.debates.find(
-        (d) => d.categoryType === categoryType && d.symbolOrSlug.toLowerCase() === slug
-      );
-      if (fromUser) return fromUser;
-      return mockDebates.find(
-        (d) => d.categoryType === categoryType && d.symbolOrSlug.toLowerCase() === slug
-      );
-    },
-    [userState.debates]
-  );
-
-  const getMergedArguments = useCallback(
-    (debateId: string): Argument[] => {
-      const mockArgs = mockArgumentsByDebateId[debateId] ?? [];
-      const userArgs = userState.argumentsByDebateId[debateId] ?? [];
-      return [...mockArgs, ...userArgs];
-    },
-    [userState.argumentsByDebateId]
+    [supabase]
   );
 
   const value = useMemo(
     () => ({
       getMergedDebates,
+      getCategoryDebates,
       getMergedDebate,
       getMergedArguments,
+      fetchHomeDebates,
+      fetchCategoryDebates,
+      fetchDebate,
+      loadArgumentsForDebate,
       addDebate,
       addArgument,
+      homeLoading,
+      homeError,
+      categoryLoading,
+      categoryError,
+      debateLoading,
+      debateError,
+      argumentsLoading,
+      argumentsError,
+      debatesLoading: homeLoading,
+      debatesError: homeError,
     }),
-    [getMergedDebates, getMergedDebate, getMergedArguments, addDebate, addArgument]
+    [
+      getMergedDebates,
+      getCategoryDebates,
+      getMergedDebate,
+      getMergedArguments,
+      fetchHomeDebates,
+      fetchCategoryDebates,
+      fetchDebate,
+      loadArgumentsForDebate,
+      addDebate,
+      addArgument,
+      homeLoading,
+      homeError,
+      categoryLoading,
+      categoryError,
+      debateLoading,
+      debateError,
+      argumentsLoading,
+      argumentsError,
+    ]
   );
 
   return (

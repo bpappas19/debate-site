@@ -1,12 +1,44 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useUI } from "@/contexts/UIContext";
+import { createClient } from "@/lib/supabaseClient";
+import type { User as AuthUser } from "@supabase/supabase-js";
 
 export default function NavBar() {
-  const { sidebarOpen, toggleSidebar } = useUI();
+  const router = useRouter();
+  const { toggleSidebar } = useUI();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
+    const getSession = async () => {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      setUser(u);
+      setAuthLoading(false);
+    };
+    getSession();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setUser(null);
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-4 lg:px-6 py-3">
@@ -50,12 +82,37 @@ export default function NavBar() {
               <span className="material-symbols-outlined">notifications</span>
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a2130]"></span>
             </button>
-            <div className="flex items-center gap-3 cursor-pointer p-1 pr-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-              <div className="w-8 h-8 rounded-full bg-[#135bec]/20 flex items-center justify-center text-sm">
-                👤
-              </div>
-              <span className="text-sm font-semibold hidden lg:block">Guest</span>
-            </div>
+            {!authLoading && (
+              user ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 cursor-default p-1 pr-3 rounded-full">
+                    <div className="w-8 h-8 rounded-full bg-[#135bec]/20 flex items-center justify-center text-sm font-semibold text-[#135bec]">
+                      {(user.user_metadata?.username as string)?.slice(0, 1)?.toUpperCase() ?? user.email?.slice(0, 1)?.toUpperCase() ?? "?"}
+                    </div>
+                    <span className="text-sm font-semibold hidden lg:block text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                      {user.user_metadata?.username ?? user.email}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="text-sm font-medium text-[#4c669a] dark:text-[#94a3b8] hover:text-[#135bec] dark:hover:text-[#135bec] transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 cursor-pointer p-2 pr-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#135bec]/20 flex items-center justify-center text-sm">
+                    👤
+                  </div>
+                  <span className="text-sm font-semibold hidden lg:block text-gray-700 dark:text-gray-300">Sign in</span>
+                </Link>
+              )
+            )}
           </div>
         </nav>
       </div>
