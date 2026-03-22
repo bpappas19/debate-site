@@ -20,6 +20,12 @@ import type {
 } from "./types";
 import type { CategoryType, ArgumentSide } from "./types";
 
+/** Maps legacy DB enum value HOLD to CON until migration 0002 has run. */
+function normalizeArgumentSide(raw: string): ArgumentSide {
+  if (raw === "HOLD") return "CON";
+  return raw as ArgumentSide;
+}
+
 // --- Mappers: ensure created_at (and any date strings) become Date for UI types ---
 
 function mapRowToDebate(row: DebateRow): Debate {
@@ -36,7 +42,10 @@ function mapRowToDebate(row: DebateRow): Debate {
     totalVotes: row.total_votes ?? row.pro_votes + row.con_votes,
     createdAt: new Date(row.created_at),
     resolved: row.resolved ?? false,
-    resolvedSide: (row.resolved_side as Debate["resolvedSide"]) ?? undefined,
+    resolvedSide:
+      row.resolved_side && row.resolved_side !== "HOLD"
+        ? normalizeArgumentSide(row.resolved_side)
+        : undefined,
     resolvedAt: row.resolved_at ? new Date(row.resolved_at) : undefined,
     image: row.image ?? undefined,
     tags: row.tags ?? [],
@@ -62,7 +71,7 @@ function mapRowToArgument(row: ArgumentRow): Argument {
   return {
     id: row.id,
     debateId: row.debate_id,
-    side: row.side as ArgumentSide,
+    side: normalizeArgumentSide(row.side),
     content: row.content,
     author,
     isAnonymous: row.is_anonymous === true,

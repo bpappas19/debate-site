@@ -12,8 +12,8 @@ export type CategoryType =
   | "products"
   | "culture";
 
-/** Generic argument side. Stocks display as Bull / Bear / Hold; other categories as For/Against, Yes/No, etc. */
-export type ArgumentSide = "PRO" | "CON" | "HOLD";
+/** Generic argument side. Stocks display as Bull / Bear; other categories as Pro / Con, etc. */
+export type ArgumentSide = "PRO" | "CON";
 
 /** Legacy YES/NO for backward compatibility where needed. Maps: YES → PRO, NO → CON. */
 export type Side = "YES" | "NO";
@@ -25,7 +25,7 @@ export interface User {
   points: number;
 }
 
-/** Single argument in a debate. Side is generic (PRO/CON/HOLD). */
+/** Single argument in a debate. Side is generic (PRO/CON). */
 export interface Argument {
   id: string;
   debateId: string;

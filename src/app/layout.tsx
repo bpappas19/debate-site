@@ -31,7 +31,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} font-display antialiased bg-[#f6f6f8] dark:bg-[#101622] text-[#0d121b] dark:text-gray-100 min-h-screen w-full`}
+        className={`${inter.variable} font-display antialiased bg-[#f6f6f8] dark:bg-[#101622] text-[#0d121b] dark:text-gray-100 min-h-screen w-full max-w-full overflow-x-hidden`}
       >
         <UIProvider>
           <DebatesProvider>

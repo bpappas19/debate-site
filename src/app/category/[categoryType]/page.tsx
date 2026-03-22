@@ -111,25 +111,25 @@ export default function CategoryPage() {
   };
 
   return (
-    <main className="py-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+    <main className="pt-2 pb-6 md:py-6 min-w-0 max-w-full">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 md:gap-4 mb-6 md:mb-8">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
             {config.label} Debates
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5 md:mt-1">
             {debates.length} debate{debates.length !== 1 ? "s" : ""} in this category
           </p>
         </div>
         <Link
           href="/"
-          className="text-sm font-medium text-[#135bec] hover:underline"
+          className="text-xs md:text-sm font-medium text-[#135bec] hover:underline shrink-0 self-start sm:self-auto"
         >
           ← Home
         </Link>
       </div>
 
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 items-stretch">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 items-stretch min-w-0">
         {debates.map((debate) => {
           const args = getMergedArguments(debate.id);
           const proCountFromArgs = args.filter((a) => a.side === "PRO").length;

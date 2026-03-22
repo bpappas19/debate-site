@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseClient";
@@ -11,8 +11,8 @@ import SentimentBar from "@/components/SentimentBar";
 import ArgumentList from "@/components/ArgumentList";
 import StockMetaBar from "@/components/StockMetaBar";
 import Tag from "@/components/Tag";
-import FollowDebateButton from "@/components/FollowDebateButton";
-import type { StockMetadata } from "@/lib/types";
+import MobileArgumentSideToggle from "@/components/MobileArgumentSideToggle";
+import type { ArgumentSide, StockMetadata } from "@/lib/types";
 
 export default function DebateDetailContent() {
   const params = useParams();
@@ -54,6 +54,7 @@ export default function DebateDetailContent() {
   }, [categoryType, entitySlug, fetchHomeDebates, fetchDebate]);
 
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [mobileFocusedSide, setMobileFocusedSide] = useState<ArgumentSide>("PRO");
   useEffect(() => {
     let cancelled = false;
     const supabase = createClient();
@@ -100,18 +101,29 @@ export default function DebateDetailContent() {
   const conCount = arguments_.filter((a) => a.side === "CON").length;
   const totalFromArguments = proCount + conCount;
 
+  const { topProCount, topConCount } = useMemo(() => {
+    const top = arguments_.filter((a) => !a.parentId);
+    return {
+      topProCount: top.filter((a) => a.side === "PRO").length,
+      topConCount: top.filter((a) => a.side === "CON").length,
+    };
+  }, [arguments_]);
+
+  useEffect(() => {
+    setMobileFocusedSide("PRO");
+  }, [debate?.id]);
+
   const proLabel = debate.categoryType === "stocks" ? "Bull" : "Pro";
   const conLabel = debate.categoryType === "stocks" ? "Bear" : "Con";
   const sideLabels =
     debate.categoryType === "stocks"
-      ? { PRO: "Bull", CON: "Bear", HOLD: "Hold" }
-      : { PRO: "Pro", CON: "Con", HOLD: "Hold" };
+      ? { PRO: "Bull", CON: "Bear" }
+      : { PRO: "Pro", CON: "Con" };
   const emptyMessage =
     debate.categoryType === "stocks"
       ? {
           PRO: "No arguments yet. Be the first to make the bull case!",
           CON: "No arguments yet. Be the first to make the bear case!",
-          HOLD: "No arguments yet. Be the first to argue Hold!",
         }
       : undefined;
 
@@ -160,7 +172,6 @@ export default function DebateDetailContent() {
           </div>
         </div>
         <div className="flex flex-wrap gap-3">
-          <FollowDebateButton />
           {isAuthor && (
             <Link
               href={`/debate/${debate.categoryType}/${debate.symbolOrSlug}/edit`}
@@ -189,7 +200,19 @@ export default function DebateDetailContent() {
         />
       </div>
 
-      <div className="flex border-b border-[#cfd7e7] dark:border-[#2d3748] gap-8 mb-6">
+      {/* Mobile: Bull/Bear (or Pro/Con) segmented control; desktop: DEBATE tab */}
+      <div className="md:hidden sticky top-14 z-30 -mx-1 px-1 pt-1 pb-4 mb-2 bg-[#f6f6f8]/92 dark:bg-[#101622]/92 backdrop-blur-md supports-[backdrop-filter]:bg-[#f6f6f8]/80 dark:supports-[backdrop-filter]:bg-[#101622]/85">
+        <MobileArgumentSideToggle
+          proLabel={proLabel}
+          conLabel={conLabel}
+          proCount={topProCount}
+          conCount={topConCount}
+          value={mobileFocusedSide}
+          onChange={setMobileFocusedSide}
+        />
+      </div>
+
+      <div className="hidden md:flex border-b border-[#cfd7e7] dark:border-[#2d3748] gap-8 mb-6">
         <span className="flex flex-col items-center justify-center border-b-[3px] border-[#135bec] text-[#135bec] pb-[13px] pt-2">
           <p className="text-sm font-bold tracking-wide">DEBATE</p>
         </span>
@@ -208,6 +231,7 @@ export default function DebateDetailContent() {
           currentUserId={currentUserId}
           debateId={debate.id}
           votedArgumentIds={getVotedArgumentIds(debate.id)}
+          mobileFocusedSide={mobileFocusedSide}
           onEditArgument={(argumentId, newContent) =>
             updateArgument(debate.id, argumentId, newContent)
           }

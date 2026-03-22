@@ -94,8 +94,8 @@ export default function TickerSearch({
     <div className={`relative ${className}`}>
       <form onSubmit={handleSubmit}>
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <span className="material-symbols-outlined">search</span>
+          <div className="absolute inset-y-0 left-0 pl-2.5 md:pl-3 flex items-center pointer-events-none text-gray-400">
+            <span className="material-symbols-outlined !text-[18px] md:!text-[20px]">search</span>
           </div>
           <input
             type="text"
@@ -104,7 +104,7 @@ export default function TickerSearch({
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
-            className="block w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#135bec] text-sm placeholder-gray-500 transition-all"
+            className="block w-full min-w-0 pl-9 md:pl-10 pr-3 md:pr-4 py-2.5 md:py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#135bec] text-sm placeholder-gray-500 transition-all"
           />
         </div>
       </form>

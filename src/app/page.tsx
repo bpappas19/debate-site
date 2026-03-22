@@ -113,9 +113,9 @@ function Section({
 }) {
   if (debates.length === 0) return null;
   return (
-    <section className="mb-12">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-[#0d121b] dark:text-white">
+    <section className="mb-8 md:mb-12">
+      <div className="flex items-center justify-between gap-3 mb-4 md:mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-[#0d121b] dark:text-white">
           {title}
         </h2>
         {viewAllHref && (
@@ -127,7 +127,7 @@ function Section({
           </Link>
         )}
       </div>
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 min-w-0">
         {debates.map((d) => {
           const args = getMergedArguments(d.id);
           const proCountFromArgs = args.filter((a) => a.side === "PRO").length;
@@ -194,19 +194,16 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="mb-12 md:mb-16">
-        <div className="text-center max-w-3xl mx-auto mb-8">
-          <h1 className="text-4xl md:text-5xl font-black text-[#0d121b] dark:text-white tracking-tight mb-4">
-            Debate Stocks. Test Conviction. See Both Sides.
+      <section className="mb-6 md:mb-10 lg:mb-12">
+        <div className="text-center max-w-lg sm:max-w-2xl mx-auto mb-4 md:mb-5 px-1">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[2.625rem] font-black text-[#0d121b] dark:text-white tracking-tight leading-[1.1] text-balance mb-2 md:mb-3">
+            Debate Stocks. See Both Sides.
           </h1>
-          <p className="text-lg text-[#4c669a] dark:text-[#94a3b8] mb-2">
-            The best place to test conviction on market ideas.
-          </p>
-          <p className="text-sm text-[#4c669a] dark:text-[#94a3b8]">
-            Starting with stocks — more categories coming later.
+          <p className="text-sm sm:text-base md:text-[1.0625rem] text-gray-500 dark:text-gray-400 leading-snug max-w-md mx-auto">
+            Test conviction on market ideas.
           </p>
         </div>
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-xl mx-auto min-w-0 pt-0.5">
           <TickerSearch placeholder="Search by ticker or company name..." />
         </div>
       </section>

@@ -15,7 +15,7 @@ CREATE TYPE category_type AS ENUM (
   'culture'
 );
 
-CREATE TYPE argument_side AS ENUM ('PRO', 'CON', 'HOLD');
+CREATE TYPE argument_side AS ENUM ('PRO', 'CON');
 
 -- -----------------------------------------------------------------------------
 -- Profiles (extends auth.users; created on signup via trigger or app)

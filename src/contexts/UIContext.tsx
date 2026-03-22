@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 interface UIContextType {
   sidebarOpen: boolean;
@@ -11,7 +17,17 @@ interface UIContextType {
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
 export function UIProvider({ children }: { children: ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  /** Mobile starts closed; md+ opens sidebar column after mount (avoids full-screen overlay on phones). */
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      if (window.matchMedia("(min-width: 768px)").matches) {
+        setSidebarOpen(true);
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const toggleSidebar = () => {
     setSidebarOpen((prev) => !prev);

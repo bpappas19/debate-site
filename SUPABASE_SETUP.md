@@ -49,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 CREATE TYPE category_type AS ENUM (
   'stocks', 'crypto', 'sports', 'politics', 'products', 'culture'
 );
-CREATE TYPE argument_side AS ENUM ('PRO', 'CON', 'HOLD');
+CREATE TYPE argument_side AS ENUM ('PRO', 'CON');
 
 -- Profiles
 CREATE TABLE profiles (

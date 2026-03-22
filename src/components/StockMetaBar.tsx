@@ -11,7 +11,7 @@ interface StockMetaBarProps {
 export default function StockMetaBar({ meta, className = "" }: StockMetaBarProps) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 text-xs font-medium text-gray-600 dark:text-gray-400 ${className}`}
+      className={`flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3 text-[11px] md:text-xs font-medium text-gray-600 dark:text-gray-400 min-w-0 ${className}`}
     >
       {meta.ticker && (
         <span className="font-mono font-bold text-[#135bec]">{meta.ticker}</span>

@@ -9,7 +9,7 @@ import type { Argument } from "@/lib/types";
 interface ReplyItemProps {
   argument: Argument;
   replyToUsername: string;
-  sideLabels?: { PRO: string; CON: string; HOLD: string };
+  sideLabels?: { PRO: string; CON: string };
   isAuthor?: boolean;
   userHasUpvoted?: boolean;
   onEdit?: (newContent: string) => void | Promise<void>;
@@ -17,7 +17,7 @@ interface ReplyItemProps {
   onToggleVote?: () => void | Promise<void>;
 }
 
-const defaultSideLabels = { PRO: "Pro", CON: "Con", HOLD: "Hold" };
+const defaultSideLabels = { PRO: "Pro", CON: "Con" };
 
 function timeAgo(date: Date): string {
   const now = new Date();
@@ -47,13 +47,10 @@ export default function ReplyItem({
   const [voting, setVoting] = useState(false);
   const label = sideLabels[argument.side];
   const isPro = argument.side === "PRO";
-  const isCon = argument.side === "CON";
 
   const sidePillClass = isPro
     ? "bg-emerald-500/10 text-emerald-400 dark:bg-emerald-500/10 dark:text-emerald-400"
-    : isCon
-      ? "bg-red-500/10 text-red-400 dark:bg-red-500/10 dark:text-red-400"
-      : "bg-amber-500/10 text-amber-500 dark:bg-amber-500/10 dark:text-amber-400";
+    : "bg-red-500/10 text-red-400 dark:bg-red-500/10 dark:text-red-400";
 
   const handleSaveEdit = async () => {
     if (editContent.trim() === argument.content || !onEdit) {

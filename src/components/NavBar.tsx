@@ -39,6 +39,8 @@ export default function NavBar() {
     };
   }, []);
 
+  const hasUnreadNotifications = false; // replace with real unread count when notifications ship
+
   const handleSignOut = async () => {
     const supabase = createClient();
     if (!supabase) return;
@@ -48,7 +50,7 @@ export default function NavBar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-4 lg:px-6 h-14 flex items-center overflow-visible">
+    <header className="sticky top-0 z-50 w-full max-w-full bg-white dark:bg-[#1a2130] border-b border-gray-200 dark:border-gray-800 px-4 md:px-6 h-14 flex items-center overflow-x-hidden overflow-y-visible">
       <div className="w-full flex items-center justify-between gap-8">
         {/* Menu & Brand */}
         <div className="flex items-center gap-3 overflow-visible">
@@ -61,7 +63,7 @@ export default function NavBar() {
           </button>
           <Link
             href="/"
-            className="flex items-center shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] rounded-lg -my-3 md:-my-4 lg:-my-5"
+            className="flex items-center shrink-0 min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#135bec] rounded-lg -my-2.5 sm:-my-3 md:-my-4 lg:-my-5"
             aria-label="DebateIt home"
           >
             <Image
@@ -69,7 +71,7 @@ export default function NavBar() {
               alt="DebateIt"
               width={560}
               height={143}
-              className="h-24 md:h-32 lg:h-40 w-auto"
+              className="h-20 w-auto sm:h-24 md:h-32 lg:h-40 max-w-[min(280px,calc(100vw_-_9.5rem))] sm:max-w-none"
               priority
             />
           </Link>
@@ -101,7 +103,12 @@ export default function NavBar() {
               className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg relative"
             >
               <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a2130]"></span>
+              {hasUnreadNotifications ? (
+                <span
+                  className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#1a2130]"
+                  aria-hidden
+                />
+              ) : null}
             </button>
             {!authLoading && (
               user ? (

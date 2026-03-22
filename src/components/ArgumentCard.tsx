@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Generic argument card. Accepts PRO/CON/HOLD and optional display labels
- * (e.g. Bull/Bear/Hold for stocks, For/Against for other categories).
+ * Generic argument card. Accepts PRO/CON and optional display labels
+ * (e.g. Bull/Bear for stocks, Pro/Con for other categories).
  * When isAuthor, shows Edit and Delete actions.
  */
 import { useState } from "react";
@@ -10,8 +10,8 @@ import type { Argument } from "@/lib/types";
 
 interface ArgumentCardProps {
   argument: Argument;
-  /** Optional side labels, e.g. { PRO: "Bull", CON: "Bear", HOLD: "Hold" } */
-  sideLabels?: { PRO: string; CON: string; HOLD: string };
+  /** Optional side labels, e.g. { PRO: "Bull", CON: "Bear" } */
+  sideLabels?: { PRO: string; CON: string };
   /** When true, show Edit and Delete buttons (author only). */
   isAuthor?: boolean;
   onEdit?: (newContent: string) => void | Promise<void>;
@@ -28,7 +28,7 @@ interface ArgumentCardProps {
   replyToUsername?: string;
 }
 
-const defaultSideLabels = { PRO: "Pro", CON: "Con", HOLD: "Hold" };
+const defaultSideLabels = { PRO: "Pro", CON: "Con" };
 
 export default function ArgumentCard({
   argument,
@@ -51,23 +51,10 @@ export default function ArgumentCard({
   const label = sideLabels[argument.side];
   const isPro = argument.side === "PRO";
   const isCon = argument.side === "CON";
-  const isHold = argument.side === "HOLD";
 
-  const sideColor = isPro
-    ? "border-[#22c55e]"
-    : isCon
-      ? "border-[#ef4444]"
-      : "border-amber-500";
-  const sideTextColor = isPro
-    ? "text-[#22c55e]"
-    : isCon
-      ? "text-[#ef4444]"
-      : "text-amber-600 dark:text-amber-400";
-  const sideHoverColor = isPro
-    ? "hover:bg-[#22c55e]/10"
-    : isCon
-      ? "hover:bg-[#ef4444]/10"
-      : "hover:bg-amber-500/10";
+  const sideColor = isPro ? "border-[#22c55e]" : "border-[#ef4444]";
+  const sideTextColor = isPro ? "text-[#22c55e]" : "text-[#ef4444]";
+  const sideHoverColor = isPro ? "hover:bg-[#22c55e]/10" : "hover:bg-[#ef4444]/10";
 
   const timeAgo = (date: Date): string => {
     const now = new Date();
@@ -140,9 +127,7 @@ export default function ArgumentCard({
               className={`rounded uppercase ${
                 isPro
                   ? "bg-[#22c55e]/10 text-[#22c55e]"
-                  : isCon
-                    ? "bg-[#ef4444]/10 text-[#ef4444]"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  : "bg-[#ef4444]/10 text-[#ef4444]"
               } ${isNested ? "text-[9px] font-bold px-1 py-0.5" : "text-[10px] font-black px-1.5 py-0.5"}`}
             >
               {label}
@@ -233,7 +218,7 @@ export default function ArgumentCard({
             title={userHasUpvoted ? "Unlike" : "Like"}
           >
             <span className={`material-symbols-outlined ${userHasUpvoted ? "fill" : ""}`}>
-              {isPro || isCon ? "thumb_up" : "remove"}
+              thumb_up
             </span>
             <span className={isNested ? "text-xs font-bold" : "text-sm font-bold"}>{argument.upvotes}</span>
           </button>

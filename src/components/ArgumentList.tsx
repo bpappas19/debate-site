@@ -1,16 +1,16 @@
 /**
- * Generic argument list: groups arguments by side (PRO/CON/HOLD), shows top-level with nested replies.
+ * Generic argument list: groups arguments by side (PRO/CON), shows top-level with nested replies.
  * Top-level = full ArgumentCard. Replies = compact ReplyItem in a lightweight thread (no card, no heavy box).
  */
 import { useState, useMemo } from "react";
-import type { Argument } from "@/lib/types";
+import type { Argument, ArgumentSide } from "@/lib/types";
 import ArgumentCard from "./ArgumentCard";
 import ReplyItem from "./ReplyItem";
 
 interface ArgumentListProps {
   arguments_: Argument[];
-  sideLabels?: { PRO: string; CON: string; HOLD: string };
-  emptyMessage?: { PRO: string; CON: string; HOLD: string };
+  sideLabels?: { PRO: string; CON: string };
+  emptyMessage?: { PRO: string; CON: string };
   currentUserId?: string | null;
   debateId?: string;
   /** Argument IDs the current user has liked (for thumb state). */
@@ -20,17 +20,20 @@ interface ArgumentListProps {
   onToggleVote?: (argumentId: string) => void | Promise<void>;
   /** Post a reply to a comment. */
   onReply?: (parentArgument: Argument, content: string) => void | Promise<void>;
+  /**
+   * Below md, show only this column; md+ always shows both. Used with mobile segmented control on debate detail.
+   */
+  mobileFocusedSide?: ArgumentSide;
 }
 
 const defaultEmpty = {
   PRO: "No arguments yet. Be the first to argue Pro!",
   CON: "No arguments yet. Be the first to argue Con!",
-  HOLD: "No arguments yet. Be the first to argue Hold!",
 };
 
 export default function ArgumentList({
   arguments_,
-  sideLabels = { PRO: "Pro", CON: "Con", HOLD: "Hold" },
+  sideLabels = { PRO: "Pro", CON: "Con" },
   emptyMessage = defaultEmpty,
   currentUserId = null,
   debateId,
@@ -39,6 +42,7 @@ export default function ArgumentList({
   onDeleteArgument,
   onToggleVote,
   onReply,
+  mobileFocusedSide,
 }: ArgumentListProps) {
   const topLevel = arguments_.filter((a) => !a.parentId);
   const repliesByParentId = useMemo(
@@ -55,7 +59,6 @@ export default function ArgumentList({
 
   const proArgs = topLevel.filter((a) => a.side === "PRO");
   const conArgs = topLevel.filter((a) => a.side === "CON");
-  const holdArgs = topLevel.filter((a) => a.side === "HOLD");
 
   const [openReplyId, setOpenReplyId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
@@ -187,32 +190,32 @@ export default function ArgumentList({
   };
 
   const renderColumn = (
-    side: "PRO" | "CON" | "HOLD",
+    side: "PRO" | "CON",
     args: Argument[],
     label: string,
     barColor: string
-  ) => (
-    <div key={side} className="flex flex-col gap-6">
-      <div className="lg:sticky lg:top-[80px] z-10 py-3 bg-[#f6f6f8] dark:bg-[#101622] flex items-center justify-between">
+  ) => {
+    const columnVisibility =
+      mobileFocusedSide != null && side !== mobileFocusedSide
+        ? "hidden md:flex"
+        : "flex";
+    return (
+    <div key={side} className={`min-w-0 flex-col gap-6 ${columnVisibility}`}>
+      <div
+        className={`lg:sticky lg:top-[80px] z-10 py-3 bg-[#f6f6f8] dark:bg-[#101622] items-center justify-between ${
+          mobileFocusedSide != null ? "hidden md:flex" : "flex"
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div
             className={`size-3 rounded-full shadow-[0_0_8px_currentColor] ${barColor}`}
             style={{
-              color:
-                side === "PRO"
-                  ? "rgb(34, 197, 94)"
-                  : side === "CON"
-                    ? "rgb(239, 68, 68)"
-                    : "rgb(245, 158, 11)",
+              color: side === "PRO" ? "rgb(34, 197, 94)" : "rgb(239, 68, 68)",
             }}
           />
           <h3
             className={`text-xl font-black uppercase tracking-tighter ${
-              side === "PRO"
-                ? "text-[#22c55e]"
-                : side === "CON"
-                  ? "text-[#ef4444]"
-                  : "text-amber-500"
+              side === "PRO" ? "text-[#22c55e]" : "text-[#ef4444]"
             }`}
           >
             Arguments for {label}
@@ -232,7 +235,8 @@ export default function ArgumentList({
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative">
@@ -247,16 +251,6 @@ export default function ArgumentList({
         conArgs,
         sideLabels.CON,
         "bg-[#ef4444]"
-      )}
-      {holdArgs.length > 0 && (
-        <div className="lg:col-span-2">
-          {renderColumn(
-            "HOLD",
-            holdArgs,
-            sideLabels.HOLD,
-            "bg-amber-500"
-          )}
-        </div>
       )}
     </div>
   );
