@@ -144,7 +144,7 @@ export default function EditDebatePage() {
     );
   }
 
-  if (authorized && !debateForForm) {
+  if (!debateForForm) {
     return (
       <main className="py-10">
         <div className="mx-auto max-w-3xl text-center">

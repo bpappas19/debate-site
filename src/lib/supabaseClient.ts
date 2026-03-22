@@ -11,11 +11,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 let browserClient: SupabaseClient | null = null;
 
+type AuthGetUserResult = Awaited<ReturnType<SupabaseClient["auth"]["getUser"]>>;
+
 /** Serialize auth.getUser() so concurrent calls don't steal the session lock. */
-let authGetUserQueue: Promise<Awaited<ReturnType<SupabaseClient["auth"]["getUser"]>>> = Promise.resolve({
+let authGetUserQueue: Promise<AuthGetUserResult> = Promise.resolve({
   data: { user: null },
   error: null,
-});
+} as unknown as AuthGetUserResult);
 
 function createClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -28,7 +30,10 @@ function createClient(): SupabaseClient | null {
     authGetUserQueue = authGetUserQueue
       .then(() => originalGetUser())
       .catch((err) => {
-        authGetUserQueue = Promise.resolve({ data: { user: null }, error: err });
+        authGetUserQueue = Promise.resolve({
+          data: { user: null },
+          error: err,
+        } as unknown as AuthGetUserResult);
         return authGetUserQueue;
       });
     return authGetUserQueue;

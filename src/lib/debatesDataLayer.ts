@@ -55,7 +55,8 @@ function mapRowToDebate(row: DebateRow): Debate {
 }
 
 function mapRowToArgument(row: ArgumentRow): Argument {
-  const profile = row.profiles;
+  const raw = row.profiles;
+  const profile = Array.isArray(raw) ? raw[0] ?? null : raw ?? null;
   const displayUsername =
     row.author_username != null && row.author_username !== ""
       ? row.author_username

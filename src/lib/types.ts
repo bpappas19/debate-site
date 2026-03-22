@@ -122,7 +122,11 @@ export interface ArgumentRow {
   author_username?: string | null;
   is_anonymous?: boolean;
   parent_id?: string | null;
-  profiles?: { id: string; username: string; avatar_url: string | null } | null;
+  /** PostgREST may return a single object or a one-element array for FK embeds. */
+  profiles?:
+    | { id: string; username: string; avatar_url: string | null }
+    | { id: string; username: string; avatar_url: string | null }[]
+    | null;
 }
 
 /**
