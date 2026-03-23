@@ -144,9 +144,12 @@ export default function DebateDetailContent() {
           {categoryLabel}
         </Link>
         <span className="text-[#4c669a] text-sm">/</span>
-        <span className="text-[#0d121b] dark:text-white text-sm font-medium">
+        <Link
+          href={`/stocks/${debate.symbolOrSlug}`}
+          className="text-[#0d121b] dark:text-white text-sm font-medium hover:underline"
+        >
           {debate.symbolOrSlug.toUpperCase()}
-        </span>
+        </Link>
       </div>
 
       <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-8">

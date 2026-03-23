@@ -79,7 +79,13 @@ export default function TickerSearch({
     return { stockMatches, debateMatches };
   }, [stockDebates, trimmedQuery]);
 
-  const handleSelectTicker = (symbolOrSlug: string) => {
+  const handleSelectStock = (symbolOrSlug: string) => {
+    setQuery("");
+    setFocused(false);
+    router.push(`/stocks/${symbolOrSlug}`);
+  };
+
+  const handleSelectDebate = (symbolOrSlug: string) => {
     setQuery("");
     setFocused(false);
     router.push(`/debate/stocks/${symbolOrSlug}`);
@@ -87,7 +93,7 @@ export default function TickerSearch({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (stockMatches[0]) handleSelectTicker(stockMatches[0].symbolOrSlug);
+    if (stockMatches[0]) handleSelectStock(stockMatches[0].symbolOrSlug);
   };
 
   return (
@@ -120,7 +126,7 @@ export default function TickerSearch({
                 <button
                   key={d.id}
                   type="button"
-                  onMouseDown={() => handleSelectTicker(d.symbolOrSlug)}
+                  onMouseDown={() => handleSelectStock(d.symbolOrSlug)}
                   className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between gap-2"
                 >
                   <div>
@@ -134,7 +140,7 @@ export default function TickerSearch({
                       {d.entityName}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-400">View stock debate</span>
+                  <span className="text-xs text-gray-400">View stock page</span>
                 </button>
               ))}
             </div>
@@ -150,7 +156,7 @@ export default function TickerSearch({
                 <button
                   key={d.id}
                   type="button"
-                  onMouseDown={() => handleSelectTicker(d.symbolOrSlug)}
+                  onMouseDown={() => handleSelectDebate(d.symbolOrSlug)}
                   className="w-full text-left px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between gap-2"
                 >
                   <div className="text-left">
