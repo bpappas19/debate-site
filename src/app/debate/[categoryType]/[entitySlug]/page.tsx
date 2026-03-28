@@ -7,14 +7,30 @@ import DebateDetailContent from "@/components/DebateDetailContent";
 import { getDebateForPage, resolveDebatePageParams } from "@/lib/getDebateForPage";
 import { getSiteUrl } from "@/lib/siteUrl";
 
+/** Same chain as opengraph-image.tsx: resolveDebatePageParams → getDebateForPage (full result). */
+async function loadDebateForRoute(
+  params: Promise<{ categoryType?: string; entitySlug?: string }>
+) {
+  const { categoryType, entitySlug } = await resolveDebatePageParams(params);
+  const debateResult = await getDebateForPage(categoryType, entitySlug);
+  return { categoryType, entitySlug, debateResult };
+}
+
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ categoryType: string; entitySlug: string }>;
 }): Promise<Metadata> {
-  const { categoryType, entitySlug } = await resolveDebatePageParams(params);
-  const { data: debate } = await getDebateForPage(categoryType, entitySlug);
-  if (!debate) notFound();
+  const { debateResult } = await loadDebateForRoute(params);
+  const debate = debateResult.data;
+  if (!debate) {
+    return {
+      title: "Debate | DebateIt",
+      description: "Read viewpoints and join the debate on DebateIt.",
+    };
+  }
 
   const title = debate.debateQuestion || debate.entityName;
   const description = `Bull vs Bear debate on ${title}`;
@@ -44,8 +60,23 @@ export default async function DebateDetailPage({
 }: {
   params: Promise<{ categoryType: string; entitySlug: string }>;
 }) {
-  const { categoryType, entitySlug } = await resolveDebatePageParams(params);
-  const { data: debate } = await getDebateForPage(categoryType, entitySlug);
+  const rawParams = await params;
+  const { categoryType, entitySlug, debateResult } = await loadDebateForRoute(params);
+  const debate = debateResult.data;
+
+  console.log(
+    "[debate/page]",
+    JSON.stringify({
+      rawParams,
+      categoryType,
+      entitySlug,
+      getDebateForPageReturnedDebate: !!debate,
+      debateId: debate?.id ?? null,
+      debateTitle: debate ? debate.debateQuestion || debate.entityName : null,
+      fetchDebateBySlugError: debateResult.error,
+    })
+  );
+
   if (!debate) notFound();
   const base = getSiteUrl();
   const debatePath = `/debate/${debate.categoryType}/${debate.symbolOrSlug}`;
