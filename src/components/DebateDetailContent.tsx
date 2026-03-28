@@ -12,9 +12,14 @@ import ArgumentList from "@/components/ArgumentList";
 import StockMetaBar from "@/components/StockMetaBar";
 import Tag from "@/components/Tag";
 import MobileArgumentSideToggle from "@/components/MobileArgumentSideToggle";
+import ShareDebate from "@/components/ShareDebate";
 import type { ArgumentSide, StockMetadata } from "@/lib/types";
 
-export default function DebateDetailContent() {
+export default function DebateDetailContent({
+  debateUrlAbsolute,
+}: {
+  debateUrlAbsolute: string;
+}) {
   const params = useParams();
   const categoryType = (params?.categoryType as string) ?? "";
   const entitySlug = (params?.entitySlug as string) ?? "";
@@ -161,6 +166,10 @@ export default function DebateDetailContent() {
               </div>
             )}
           </EntityHeader>
+          <ShareDebate
+            debateTitle={debate.debateQuestion || debate.entityName}
+            debateUrl={debateUrlAbsolute}
+          />
           <div className="flex items-center gap-4 mt-4 flex-wrap">
             <p className="text-[#4c669a] dark:text-[#94a3b8] text-sm font-medium">
               Volume: {totalFromArguments.toLocaleString()} votes
