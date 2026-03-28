@@ -2,11 +2,9 @@
  * Debate detail page: uses merged data (mock + user-created) from DebatesContext.
  */
 import type { Metadata } from "next";
-import { cache } from "react";
 import { notFound } from "next/navigation";
 import DebateDetailContent from "@/components/DebateDetailContent";
-import { fetchDebateBySlug } from "@/lib/debatesDataLayer";
-import { createClient } from "@/lib/supabaseServer";
+import { getDebateForPage, resolveDebatePageParams } from "@/lib/getDebateForPage";
 
 function getSiteUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
@@ -15,17 +13,12 @@ function getSiteUrl(): string {
   return "https://debateit.com";
 }
 
-const getDebateForPage = cache(async (categoryType: string, entitySlug: string) => {
-  const supabase = await createClient();
-  return fetchDebateBySlug(supabase, categoryType, entitySlug);
-});
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ categoryType: string; entitySlug: string }>;
 }): Promise<Metadata> {
-  const { categoryType, entitySlug } = await params;
+  const { categoryType, entitySlug } = await resolveDebatePageParams(params);
   const { data: debate } = await getDebateForPage(categoryType, entitySlug);
   if (!debate) notFound();
 
@@ -56,7 +49,7 @@ export default async function DebateDetailPage({
 }: {
   params: Promise<{ categoryType: string; entitySlug: string }>;
 }) {
-  const { categoryType, entitySlug } = await params;
+  const { categoryType, entitySlug } = await resolveDebatePageParams(params);
   const { data: debate } = await getDebateForPage(categoryType, entitySlug);
   if (!debate) notFound();
   const debateUrlAbsolute = `${getSiteUrl()}/debate/${debate.categoryType}/${debate.symbolOrSlug}`;

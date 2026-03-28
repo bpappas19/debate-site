@@ -1,7 +1,10 @@
 import { ImageResponse } from "next/og";
 import { notFound } from "next/navigation";
-import { fetchArgumentsForDebate, fetchDebateBySlug } from "@/lib/debatesDataLayer";
+import { fetchArgumentsForDebate } from "@/lib/debatesDataLayer";
+import { getDebateForPage, resolveDebatePageParams } from "@/lib/getDebateForPage";
 import { createClient } from "@/lib/supabaseServer";
+
+export const runtime = "nodejs";
 
 export const alt = "Debate preview";
 export const size = { width: 1200, height: 630 };
@@ -18,10 +21,11 @@ export default async function Image({
 }: {
   params: Promise<{ categoryType: string; entitySlug: string }>;
 }) {
-  const { categoryType, entitySlug } = await params;
+  const { categoryType, entitySlug } = await resolveDebatePageParams(params);
+  const { data: debate } = await getDebateForPage(categoryType, entitySlug);
+  if (!debate) notFound();
+
   const supabase = await createClient();
-  const { data: debate, error } = await fetchDebateBySlug(supabase, categoryType, entitySlug);
-  if (error || !debate) notFound();
 
   const { data: args } = await fetchArgumentsForDebate(supabase, debate.id);
 
