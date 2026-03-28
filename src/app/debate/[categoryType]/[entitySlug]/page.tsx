@@ -5,13 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import DebateDetailContent from "@/components/DebateDetailContent";
 import { getDebateForPage, resolveDebatePageParams } from "@/lib/getDebateForPage";
-
-function getSiteUrl(): string {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  if (fromEnv) return fromEnv;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "https://debateit.com";
-}
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export async function generateMetadata({
   params,
@@ -25,7 +19,8 @@ export async function generateMetadata({
   const title = debate.debateQuestion || debate.entityName;
   const description = `Bull vs Bear debate on ${title}`;
   const base = getSiteUrl();
-  const ogImageUrl = `${base}/debate/${debate.categoryType}/${debate.symbolOrSlug}/opengraph-image`;
+  const ogPath = `/debate/${debate.categoryType}/${debate.symbolOrSlug}/opengraph-image`;
+  const ogImageUrl = base ? `${base}${ogPath}` : ogPath;
 
   return {
     title,
@@ -52,6 +47,8 @@ export default async function DebateDetailPage({
   const { categoryType, entitySlug } = await resolveDebatePageParams(params);
   const { data: debate } = await getDebateForPage(categoryType, entitySlug);
   if (!debate) notFound();
-  const debateUrlAbsolute = `${getSiteUrl()}/debate/${debate.categoryType}/${debate.symbolOrSlug}`;
+  const base = getSiteUrl();
+  const debatePath = `/debate/${debate.categoryType}/${debate.symbolOrSlug}`;
+  const debateUrlAbsolute = base ? `${base}${debatePath}` : debatePath;
   return <DebateDetailContent debateUrlAbsolute={debateUrlAbsolute} />;
 }

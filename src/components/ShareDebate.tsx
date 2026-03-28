@@ -1,31 +1,44 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type ShareDebateProps = {
   debateTitle: string;
   debateUrl: string;
 };
 
+function toAbsoluteDebateUrl(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (typeof window !== "undefined" && url.startsWith("/")) {
+    return `${window.location.origin}${url}`;
+  }
+  return url;
+}
+
 export default function ShareDebate({ debateTitle, debateUrl }: ShareDebateProps) {
   const [copied, setCopied] = useState(false);
+  const [resolvedDebateUrl, setResolvedDebateUrl] = useState(debateUrl);
+
+  useEffect(() => {
+    setResolvedDebateUrl(toAbsoluteDebateUrl(debateUrl));
+  }, [debateUrl]);
 
   const tweetHref = useMemo(() => {
-    const text = `Debate: ${debateTitle}\n\nBull vs Bear arguments:\n${debateUrl}`;
+    const text = `Debate: ${debateTitle}\n\nBull vs Bear arguments:\n${resolvedDebateUrl}`;
     const u = new URL("https://twitter.com/intent/tweet");
     u.searchParams.set("text", text);
     return u.toString();
-  }, [debateTitle, debateUrl]);
+  }, [debateTitle, resolvedDebateUrl]);
 
   const copyLink = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(debateUrl);
+      await navigator.clipboard.writeText(resolvedDebateUrl);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       /* ignore */
     }
-  }, [debateUrl]);
+  }, [resolvedDebateUrl]);
 
   return (
     <div className="flex flex-row flex-wrap items-center gap-2 mt-4">

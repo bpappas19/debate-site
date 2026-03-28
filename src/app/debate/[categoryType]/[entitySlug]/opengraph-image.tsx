@@ -1,5 +1,4 @@
 import { ImageResponse } from "next/og";
-import { notFound } from "next/navigation";
 import { fetchArgumentsForDebate } from "@/lib/debatesDataLayer";
 import { getDebateForPage, resolveDebatePageParams } from "@/lib/getDebateForPage";
 import { createClient } from "@/lib/supabaseServer";
@@ -16,14 +15,69 @@ function clip(s: string, max: number): string {
   return t.length <= max ? t : `${t.slice(0, max - 1)}…`;
 }
 
+function debugLabel(s: string): string {
+  const t = (s ?? "").replace(/\s+/g, " ").trim();
+  return t || "(empty)";
+}
+
 export default async function Image({
   params,
 }: {
   params: Promise<{ categoryType: string; entitySlug: string }>;
 }) {
   const { categoryType, entitySlug } = await resolveDebatePageParams(params);
-  const { data: debate } = await getDebateForPage(categoryType, entitySlug);
-  if (!debate) notFound();
+  const debateResult = await getDebateForPage(categoryType, entitySlug);
+  const debate = debateResult.data;
+
+  if (!debate) {
+    return new ImageResponse(
+      (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: 48,
+            background: "#0f172a",
+            color: "#e2e8f0",
+            fontFamily: "ui-monospace, Menlo, Monaco, Consolas, monospace",
+            fontSize: 28,
+            lineHeight: 1.45,
+            gap: 12,
+          }}
+        >
+          <div style={{ fontSize: 36, fontWeight: 800, color: "#fbbf24", marginBottom: 8 }}>
+            OG image — debug (debate not found)
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>categoryType: </span>
+            {debugLabel(categoryType)}
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>entitySlug: </span>
+            {debugLabel(entitySlug)}
+          </div>
+          <div>
+            <span style={{ color: "#94a3b8" }}>getDebateForPage returned a debate: </span>
+            no
+          </div>
+          {debateResult.error ? (
+            <div style={{ color: "#f87171", marginTop: 8 }}>
+              <span style={{ color: "#94a3b8" }}>fetchDebateBySlug error: </span>
+              {clip(debateResult.error, 200)}
+            </div>
+          ) : null}
+          <div style={{ marginTop: 16, color: "#64748b", fontSize: 24 }}>
+            id (if found): —
+          </div>
+          <div style={{ color: "#64748b", fontSize: 24 }}>title (if found): —</div>
+        </div>
+      ),
+      { ...size }
+    );
+  }
 
   const supabase = await createClient();
 
@@ -110,7 +164,7 @@ export default async function Image({
             marginTop: 8,
           }}
         >
-          debateit.com
+          DEBATEIT
         </div>
       </div>
     ),
