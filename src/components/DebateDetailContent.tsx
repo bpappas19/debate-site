@@ -13,12 +13,15 @@ import StockMetaBar from "@/components/StockMetaBar";
 import Tag from "@/components/Tag";
 import MobileArgumentSideToggle from "@/components/MobileArgumentSideToggle";
 import ShareDebate from "@/components/ShareDebate";
-import type { ArgumentSide, StockMetadata } from "@/lib/types";
+import type { ArgumentSide, Debate, StockMetadata } from "@/lib/types";
 
 export default function DebateDetailContent({
   debateUrlAbsolute,
+  initialDebate,
 }: {
   debateUrlAbsolute: string;
+  /** Server RSC payload; used until DebatesContext has the same route in cache. */
+  initialDebate?: Debate;
 }) {
   const params = useParams();
   const categoryType = (params?.categoryType as string) ?? "";
@@ -44,14 +47,17 @@ export default function DebateDetailContent({
     argumentsError,
   } = useDebates();
 
-  // Resolve debate: cache first, then home list (handles single-fetch missing or slow)
-  const debate =
+  const contextDebate =
     getMergedDebate(categoryType, entitySlug) ??
     getMergedDebates().find(
       (d) =>
         d.categoryType.toLowerCase() === (categoryType || "").toLowerCase() &&
         d.symbolOrSlug.toLowerCase() === (entitySlug || "").toLowerCase()
     );
+
+  const debate = contextDebate ?? initialDebate;
+
+  const clientDebateLookupSettled = !homeLoading && !debateLoading;
 
   useEffect(() => {
     if (!categoryType || !entitySlug) return;
@@ -80,14 +86,14 @@ export default function DebateDetailContent({
     if (debate?.id) loadArgumentsForDebate(debate.id);
   }, [debate?.id, loadArgumentsForDebate]);
 
-  if ((debateLoading || homeLoading) && !debate) {
+  if ((debateLoading || homeLoading) && !debate && !initialDebate) {
     return (
       <main className="py-6">
         <div className="text-[#4c669a] dark:text-[#94a3b8]">Loading debate…</div>
       </main>
     );
   }
-  if (debateError) {
+  if (debateError && !debate && !initialDebate) {
     return (
       <main className="py-6">
         <div className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 mb-4">
@@ -96,7 +102,20 @@ export default function DebateDetailContent({
       </main>
     );
   }
-  if (!debate) notFound();
+  if (
+    initialDebate == null &&
+    contextDebate == null &&
+    clientDebateLookupSettled
+  ) {
+    notFound();
+  }
+  if (!debate) {
+    return (
+      <main className="py-6">
+        <div className="text-[#4c669a] dark:text-[#94a3b8]">Loading debate…</div>
+      </main>
+    );
+  }
 
   const arguments_ = getMergedArguments(debate.id);
   const categoryLabel = getCategoryByType(debate.categoryType)?.label ?? debate.categoryType;

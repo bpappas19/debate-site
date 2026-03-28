@@ -81,5 +81,7 @@ export default async function DebateDetailPage({
   const base = getSiteUrl();
   const debatePath = `/debate/${debate.categoryType}/${debate.symbolOrSlug}`;
   const debateUrlAbsolute = base ? `${base}${debatePath}` : debatePath;
-  return <DebateDetailContent debateUrlAbsolute={debateUrlAbsolute} />;
+  return (
+    <DebateDetailContent debateUrlAbsolute={debateUrlAbsolute} initialDebate={debate} />
+  );
 }
